@@ -2,27 +2,54 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Initial Setup
+
+**IMPORTANT**: Before starting any development work, ensure husky hooks are installed:
+
+```bash
+npm install
+npm run prepare  # This installs the husky git hooks
+```
+
+The repository has pre-commit hooks configured that will:
+
+- Run ESLint with auto-fix on staged TypeScript/JavaScript files
+- Run Prettier to format all staged files
+- Run TypeScript type checking on source files
+
+These hooks are already configured and will run automatically on `git commit`.
+
 ## Common Development Commands
 
 ### Build & Development
+
 - `npm run build` - Compile TypeScript to JavaScript (outputs to dist/)
 - `npm run dev` - Build and run the server
 - `npm start` - Run the compiled server (dist/index.js)
 - `npm run setup` - Display setup instructions for Claude Desktop
 
 ### Testing
+
 - `npm test` - Run all tests with Jest
 - `npm run test:watch` - Run tests in watch mode
 - `npm run test:coverage` - Generate test coverage report
 - `npm run test:manual` - Build and run manual test file
 
 To run a single test file:
+
 ```bash
 npx jest src/__tests__/specific-test.test.ts
 ```
 
 ### Pre-publish
+
 - `npm run prepublishOnly` - Build and test before publishing (runs automatically)
+
+### Code Quality
+
+- `npx eslint src/**/*.ts` - Run ESLint on TypeScript files
+- `npx prettier --check .` - Check code formatting
+- `npx lint-staged` - Run pre-commit checks manually
 
 ## Architecture Overview
 
@@ -49,6 +76,7 @@ npx jest src/__tests__/specific-test.test.ts
 ### Tool Implementation Pattern
 
 Tools are defined in `server-setup.ts` with:
+
 - Tool metadata in `listToolsHandler`
 - Implementation logic in `callToolHandler` switch statement
 - Date parsing uses local timezone, not UTC (important for date range queries)
