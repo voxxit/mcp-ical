@@ -738,66 +738,25 @@ export class CalendarManager {
       // Parse EXDATE (excluded dates) if present
       const excludedDates = new Set<string>();
       if (vevent.exdate) {
-        const exdates = Array.isArray(vevent.exdate)
-          ? vevent.exdate
-          : [vevent.exdate];
-        for (const exdate of exdates) {
-          if (typeof exdate === "string") {
-            // Handle comma-separated dates in a single EXDATE property
-            const dates = exdate.split(",");
-            for (const date of dates) {
-              // Parse the date and convert to ISO string for comparison
-              // EXDATE format: YYYYMMDDTHHMMSS or YYYYMMDD
-              const cleanDate = date.trim().replace(/[TZ]/g, "");
-              if (cleanDate.length >= 8) {
-                const year = cleanDate.substring(0, 4);
-                const month = cleanDate.substring(4, 6);
-                const day = cleanDate.substring(6, 8);
-                const hour =
-                  cleanDate.length >= 10 ? cleanDate.substring(9, 11) : "00";
-                const minute =
-                  cleanDate.length >= 12 ? cleanDate.substring(11, 13) : "00";
-                const second =
-                  cleanDate.length >= 14 ? cleanDate.substring(13, 15) : "00";
-
-                // Create a date string for comparison
-                const excludeKey = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
-                excludedDates.add(excludeKey);
-              }
-            }
-          } else if (exdate instanceof Date) {
-            // Handle Date objects
-            const instant = Temporal.Instant.fromEpochMilliseconds(
-              exdate.getTime(),
-            );
-            const zdt = instant.toZonedDateTimeISO(
-              this.timezoneDateManager.getTimezone(),
-            );
-            const excludeKey = `${zdt.year.toString().padStart(4, "0")}-${zdt.month.toString().padStart(2, "0")}-${zdt.day.toString().padStart(2, "0")}T${zdt.hour.toString().padStart(2, "0")}:${zdt.minute.toString().padStart(2, "0")}:${zdt.second.toString().padStart(2, "0")}`;
-            excludedDates.add(excludeKey);
-          } else if (typeof exdate === "object" && exdate !== null) {
-            // Handle object format from node-ical
-            const exdateObj = exdate as any;
-            if (exdateObj.val) {
-              // Recursively process the value
-              const dates = exdateObj.val.split(",");
-              for (const date of dates) {
-                const cleanDate = date.trim().replace(/[TZ]/g, "");
-                if (cleanDate.length >= 8) {
-                  const year = cleanDate.substring(0, 4);
-                  const month = cleanDate.substring(4, 6);
-                  const day = cleanDate.substring(6, 8);
-                  const hour =
-                    cleanDate.length >= 10 ? cleanDate.substring(9, 11) : "00";
-                  const minute =
-                    cleanDate.length >= 12 ? cleanDate.substring(11, 13) : "00";
-                  const second =
-                    cleanDate.length >= 14 ? cleanDate.substring(13, 15) : "00";
-
-                  const excludeKey = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
-                  excludedDates.add(excludeKey);
-                }
-              }
+        // node-ical returns exdate as an array-like object with date keys
+        // It looks like an array but also has string keys
+        if (vevent.exdate && typeof vevent.exdate === "object") {
+          // Iterate over all entries (both numeric and string keys)
+          for (const [_key, value] of Object.entries(vevent.exdate)) {
+            // Each value is a Date-like object with timezone info
+            if (value && typeof value === "object") {
+              // Get the time value - value behaves like a Date
+              const dateObj = value as any;
+              const instant = Temporal.Instant.fromEpochMilliseconds(
+                dateObj.getTime
+                  ? dateObj.getTime()
+                  : new Date(dateObj).getTime(),
+              );
+              const zdt = instant.toZonedDateTimeISO(
+                this.timezoneDateManager.getTimezone(),
+              );
+              const excludeKey = `${zdt.year.toString().padStart(4, "0")}-${zdt.month.toString().padStart(2, "0")}-${zdt.day.toString().padStart(2, "0")}T${zdt.hour.toString().padStart(2, "0")}:${zdt.minute.toString().padStart(2, "0")}:${zdt.second.toString().padStart(2, "0")}`;
+              excludedDates.add(excludeKey);
             }
           }
         }
@@ -893,27 +852,32 @@ export class CalendarManager {
         );
         const eventEnd = eventStart.add(duration);
 
-        events.push({
-          id: `${vevent.uid}-${occurrence.getTime()}`,
-          summary: vevent.summary || "",
-          description: vevent.description,
-          start: eventStart,
-          end: eventEnd,
-          location: vevent.location,
-          organizer:
-            typeof vevent.organizer === "string"
-              ? vevent.organizer
-              : vevent.organizer?.val,
-          attendees: vevent.attendee
-            ? (Array.isArray(vevent.attendee)
-                ? vevent.attendee
-                : [vevent.attendee]
-              ).map((a) => (typeof a === "string" ? a : a.val))
-            : undefined,
-          calendarName,
-          isAllDay: vevent.datetype === "date",
-          recurrence: vevent.rrule,
-        });
+        // Check if this occurrence should be excluded
+        const occurrenceKey = `${eventStart.year.toString().padStart(4, "0")}-${eventStart.month.toString().padStart(2, "0")}-${eventStart.day.toString().padStart(2, "0")}T${eventStart.hour.toString().padStart(2, "0")}:${eventStart.minute.toString().padStart(2, "0")}:${eventStart.second.toString().padStart(2, "0")}`;
+
+        if (!excludedDates.has(occurrenceKey)) {
+          events.push({
+            id: `${vevent.uid}-${occurrence.getTime()}`,
+            summary: vevent.summary || "",
+            description: vevent.description,
+            start: eventStart,
+            end: eventEnd,
+            location: vevent.location,
+            organizer:
+              typeof vevent.organizer === "string"
+                ? vevent.organizer
+                : vevent.organizer?.val,
+            attendees: vevent.attendee
+              ? (Array.isArray(vevent.attendee)
+                  ? vevent.attendee
+                  : [vevent.attendee]
+                ).map((a) => (typeof a === "string" ? a : a.val))
+              : undefined,
+            calendarName,
+            isAllDay: vevent.datetype === "date",
+            recurrence: vevent.rrule,
+          });
+        }
       }
     } catch (error) {
       const sanitizedMessage = this.sanitizeErrorMessage(

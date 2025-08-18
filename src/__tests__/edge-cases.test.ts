@@ -49,8 +49,7 @@ describe("CalendarManager - Edge Cases", () => {
       expect(recurringEvent.summary).toBe("Weekly Team Standup");
     });
 
-    // TODO: EXDATE handling is not yet implemented in CalendarManager
-    it.skip("should handle EXDATE exclusions in recurring events", async () => {
+    it("should handle EXDATE exclusions in recurring events", async () => {
       const startDate = new Date("2025-08-20");
       const endDate = new Date("2025-09-05");
       const events = await calendarManager.getEvents(
