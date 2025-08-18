@@ -59,25 +59,33 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  
+
   // Auto-subscribe to calendar if CALENDAR_URL is provided
   const calendarUrl = process.env.CALENDAR_URL;
   if (calendarUrl) {
     try {
       const calendarName = process.env.CALENDAR_NAME || "Default Calendar";
-      const refreshInterval = parseInt(process.env.CALENDAR_REFRESH_INTERVAL || "60");
-      
+      const refreshInterval = parseInt(
+        process.env.CALENDAR_REFRESH_INTERVAL || "60",
+      );
+
       console.error(`\n🔄 Auto-subscribing to calendar...`);
-      await calendarManager.subscribeCalendar(calendarUrl, calendarName, refreshInterval);
+      await calendarManager.subscribeCalendar(
+        calendarUrl,
+        calendarName,
+        refreshInterval,
+      );
       console.error(`✅ Successfully subscribed to: ${calendarName}`);
       console.error(`   Refresh interval: ${refreshInterval} minutes\n`);
     } catch (error) {
       console.error(`\n❌ Failed to auto-subscribe to calendar: ${error}\n`);
     }
   } else {
-    console.error(`\n💡 Tip: Set CALENDAR_URL environment variable to auto-subscribe on startup\n`);
+    console.error(
+      `\n💡 Tip: Set CALENDAR_URL environment variable to auto-subscribe on startup\n`,
+    );
   }
-  
+
   console.error(`🚀 iCal MCP Server is ready!`);
   console.error(`🌍 Timezone: ${timezoneManager.getTimezone()}\n`);
 }

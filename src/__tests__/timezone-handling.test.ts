@@ -1,14 +1,11 @@
 import { CalendarManager } from "../calendar-manager";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { promises as fs } from "fs";
-import path from "path";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 describe("Timezone Handling Tests", () => {
   let calendarManager: CalendarManager;
   let axiosMock: MockAdapter;
-  const testConfigPath = path.join(process.env.HOME || "", ".ical-mcp-config.json");
-  const originalConfigPath = testConfigPath + ".backup";
 
   // Calendar with events in different timezones
   const multiTimezoneCalendar = `BEGIN:VCALENDAR
@@ -81,35 +78,15 @@ DESCRIPTION:Event late in NY time (crosses midnight UTC)
 END:VEVENT
 END:VCALENDAR`;
 
-  beforeAll(async () => {
-    try {
-      await fs.rename(testConfigPath, originalConfigPath);
-    } catch (error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
   beforeEach(() => {
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
     axiosMock = new MockAdapter(axios);
-    calendarManager = new CalendarManager();
   });
 
   afterEach(async () => {
     axiosMock.restore();
-    
-    try {
-      await fs.unlink(testConfigPath);
-    } catch (error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
-  afterAll(async () => {
-    try {
-      await fs.rename(originalConfigPath, testConfigPath);
-    } catch (error) {
-      // No backup to restore, that's fine
-    }
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   describe("Single Day with Multiple Timezones", () => {
@@ -123,12 +100,12 @@ END:VCALENDAR`;
       const events = await calendarManager.getEvents(
         new Date("2025-08-12"),
         new Date("2025-08-12T23:59:59"),
-        "Timezone Calendar"
+        "Timezone Calendar",
       );
 
       expect(events.length).toBeGreaterThanOrEqual(4);
-      
-      const summaries = events.map(e => e.summary);
+
+      const summaries = events.map((e) => e.summary);
       expect(summaries).toContain("UTC Event (9 AM UTC)");
       expect(summaries).toContain("New York Event (9 AM EST)");
       expect(summaries).toContain("London Event (9 AM BST)");
@@ -139,13 +116,15 @@ END:VCALENDAR`;
       const events = await calendarManager.getEvents(
         new Date("2025-08-12"),
         new Date("2025-08-12T23:59:59"),
-        "Timezone Calendar"
+        "Timezone Calendar",
       );
 
       // Find the NY event
-      const nyEvent = events.find(e => e.summary === "New York Event (9 AM EST)");
+      const nyEvent = events.find(
+        (e) => e.summary === "New York Event (9 AM EST)",
+      );
       expect(nyEvent).toBeDefined();
-      
+
       // 9 AM EST in August should be 1 PM UTC (13:00) due to EDT
       const nyEventUTCHour = nyEvent!.start.getUTCHours();
       // Note: This might be 13 or 14 depending on DST handling
@@ -157,18 +136,20 @@ END:VCALENDAR`;
       const events = await calendarManager.getEvents(
         new Date("2025-08-12"),
         new Date("2025-08-12T23:59:59"),
-        "Timezone Calendar"
+        "Timezone Calendar",
       );
 
-      const lateEvent = events.find(e => e.summary === "Late NY Event (11 PM EST)");
+      const lateEvent = events.find(
+        (e) => e.summary === "Late NY Event (11 PM EST)",
+      );
       expect(lateEvent).toBeDefined();
-      
+
       // Event starts at 11 PM NY time on Aug 12
       // In UTC, this could be early morning Aug 13
       if (lateEvent) {
         const startDate = lateEvent.start;
         const endDate = lateEvent.end;
-        
+
         // The event should span across midnight
         expect(endDate.getTime()).toBeGreaterThan(startDate.getTime());
       }
@@ -186,22 +167,26 @@ END:VCALENDAR`;
       // Query for a specific date
       const aug12Start = new Date("2025-08-12T00:00:00");
       const aug12End = new Date("2025-08-12T23:59:59");
-      
+
       const events = await calendarManager.getEvents(
         aug12Start,
         aug12End,
-        "Timezone Calendar"
+        "Timezone Calendar",
       );
 
       // Should get all events scheduled for Aug 12 in any timezone
       expect(events.length).toBeGreaterThan(0);
-      
+
       // All returned events should have start times within the queried range
-      events.forEach(event => {
+      events.forEach((event) => {
         // The event should start on or after the start date
-        expect(event.start.getTime()).toBeGreaterThanOrEqual(aug12Start.getTime() - 86400000); // Allow 1 day buffer for timezone differences
+        expect(event.start.getTime()).toBeGreaterThanOrEqual(
+          aug12Start.getTime() - 86400000,
+        ); // Allow 1 day buffer for timezone differences
         // And before or at the end date + 1 day for timezone differences
-        expect(event.start.getTime()).toBeLessThanOrEqual(aug12End.getTime() + 86400000);
+        expect(event.start.getTime()).toBeLessThanOrEqual(
+          aug12End.getTime() + 86400000,
+        );
       });
     });
 
@@ -209,12 +194,14 @@ END:VCALENDAR`;
       const events = await calendarManager.getEvents(
         new Date("2025-08-12"),
         new Date("2025-08-12T23:59:59"),
-        "Timezone Calendar"
+        "Timezone Calendar",
       );
 
-      const floatingEvent = events.find(e => e.summary === "Floating Time Event");
+      const floatingEvent = events.find(
+        (e) => e.summary === "Floating Time Event",
+      );
       expect(floatingEvent).toBeDefined();
-      
+
       // Floating time events should be interpreted in local time
       if (floatingEvent) {
         // The hour should be 9 (as specified in the event)
@@ -269,20 +256,22 @@ END:VCALENDAR`;
       const springEvents = await calendarManager.getEvents(
         new Date("2025-03-09"),
         new Date("2025-03-09T23:59:59"),
-        "DST Calendar"
+        "DST Calendar",
       );
 
-      const springEvent = springEvents.find(e => e.summary === "Spring DST Event");
+      const springEvent = springEvents.find(
+        (e) => e.summary === "Spring DST Event",
+      );
       expect(springEvent).toBeDefined();
 
       // Test fall DST transition
       const fallEvents = await calendarManager.getEvents(
         new Date("2025-11-02"),
         new Date("2025-11-02T23:59:59"),
-        "DST Calendar"
+        "DST Calendar",
       );
 
-      const fallEvent = fallEvents.find(e => e.summary === "Fall DST Event");
+      const fallEvent = fallEvents.find((e) => e.summary === "Fall DST Event");
       expect(fallEvent).toBeDefined();
     });
   });

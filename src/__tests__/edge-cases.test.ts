@@ -3,50 +3,30 @@ import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
 import { promises as fs } from "fs";
 import path from "path";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 describe("CalendarManager - Edge Cases", () => {
   let calendarManager: CalendarManager;
   let axiosMock: MockAdapter;
   let comprehensiveIcsContent: string;
-  const testConfigPath = path.join(process.env.HOME || "", ".ical-mcp-config.json");
-  const originalConfigPath = testConfigPath + ".backup";
 
   beforeAll(async () => {
-    // Backup existing config if it exists
-    try {
-      await fs.rename(testConfigPath, originalConfigPath);
-    } catch (error) {
-      // File doesn't exist, that's fine
-    }
-
     // Read comprehensive calendar data
     comprehensiveIcsContent = await fs.readFile(
       path.join(__dirname, "fixtures", "comprehensive-calendar.ics"),
-      "utf-8"
+      "utf-8",
     );
   });
 
   beforeEach(() => {
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
     axiosMock = new MockAdapter(axios);
-    calendarManager = new CalendarManager();
   });
 
   afterEach(async () => {
     axiosMock.restore();
-    
-    try {
-      await fs.unlink(testConfigPath);
-    } catch (error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
-  afterAll(async () => {
-    try {
-      await fs.rename(originalConfigPath, testConfigPath);
-    } catch (error) {
-      // No backup to restore, that's fine
-    }
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   describe("Recurring Events", () => {
@@ -58,7 +38,7 @@ describe("CalendarManager - Edge Cases", () => {
 
     it("should handle weekly recurring events with RRULE", async () => {
       const events = await calendarManager.searchEvents("Weekly Team Standup");
-      
+
       expect(events.length).toBeGreaterThan(0);
       const recurringEvent = events[0];
       expect(recurringEvent.recurrence).toBeDefined();
@@ -68,14 +48,20 @@ describe("CalendarManager - Edge Cases", () => {
     it.skip("should handle EXDATE exclusions in recurring events", async () => {
       const startDate = new Date("2025-08-20");
       const endDate = new Date("2025-09-05");
-      const events = await calendarManager.getEvents(startDate, endDate, "Test Calendar");
-      
+      const events = await calendarManager.getEvents(
+        startDate,
+        endDate,
+        "Test Calendar",
+      );
+
       // Should not include excluded dates (Aug 25 and Sep 1)
-      const standupEvents = events.filter(e => e.summary === "Weekly Team Standup");
+      const standupEvents = events.filter(
+        (e) => e.summary === "Weekly Team Standup",
+      );
       const excludedDates = ["2025-08-25", "2025-09-01"];
-      
-      standupEvents.forEach(event => {
-        const eventDate = event.start.toISOString().split('T')[0];
+
+      standupEvents.forEach((event) => {
+        const eventDate = event.start.toISOString().split("T")[0];
         expect(excludedDates).not.toContain(eventDate);
       });
     });
@@ -90,14 +76,14 @@ describe("CalendarManager - Edge Cases", () => {
 
     it("should handle tentative events", async () => {
       const events = await calendarManager.searchEvents("Tentative");
-      
+
       expect(events.length).toBeGreaterThan(0);
       expect(events[0].summary).toContain("Tentative");
     });
 
     it("should handle cancelled events", async () => {
       const events = await calendarManager.searchEvents("Cancelled");
-      
+
       // Depending on implementation, cancelled events might be filtered out
       // or included with a cancelled status
       expect(events.length).toBeGreaterThanOrEqual(0);
@@ -105,7 +91,7 @@ describe("CalendarManager - Edge Cases", () => {
 
     it("should handle private events", async () => {
       const events = await calendarManager.searchEvents("Private");
-      
+
       expect(events.length).toBeGreaterThan(0);
       expect(events[0].summary).toContain("Private");
     });
@@ -120,7 +106,7 @@ describe("CalendarManager - Edge Cases", () => {
 
     it("should handle events with multiple attendees", async () => {
       const events = await calendarManager.searchEvents("Weekly Team Standup");
-      
+
       expect(events.length).toBeGreaterThan(0);
       const event = events[0];
       expect(event.attendees).toBeDefined();
@@ -129,14 +115,14 @@ describe("CalendarManager - Edge Cases", () => {
 
     it("should handle events with categories", async () => {
       const events = await calendarManager.searchEvents("Complex Meeting");
-      
+
       expect(events.length).toBeGreaterThan(0);
       // Categories might be parsed into description or separate field
     });
 
     it("should handle multi-line descriptions", async () => {
       const events = await calendarManager.searchEvents("Complex Meeting");
-      
+
       expect(events.length).toBeGreaterThan(0);
       const event = events[0];
       expect(event.description).toContain("Meeting Agenda:");
@@ -145,7 +131,7 @@ describe("CalendarManager - Edge Cases", () => {
 
     it("should handle location with special characters", async () => {
       const events = await calendarManager.searchEvents("Complex Meeting");
-      
+
       expect(events.length).toBeGreaterThan(0);
       const event = events[0];
       expect(event.location).toContain(",");
@@ -160,8 +146,10 @@ describe("CalendarManager - Edge Cases", () => {
     });
 
     it("should handle events with timezone information", async () => {
-      const events = await calendarManager.searchEvents("International Conference");
-      
+      const events = await calendarManager.searchEvents(
+        "International Conference",
+      );
+
       expect(events.length).toBeGreaterThan(0);
       const event = events[0];
       expect(event.start).toBeInstanceOf(Date);
@@ -172,10 +160,12 @@ describe("CalendarManager - Edge Cases", () => {
       const events = await calendarManager.getEvents(
         new Date("2025-08-24"),
         new Date("2025-08-25"),
-        "Test Calendar"
+        "Test Calendar",
       );
-      
-      const intlEvent = events.find(e => e.summary === "International Conference Call");
+
+      const intlEvent = events.find(
+        (e) => e.summary === "International Conference Call",
+      );
       expect(intlEvent).toBeDefined();
     });
   });
@@ -189,7 +179,7 @@ describe("CalendarManager - Edge Cases", () => {
 
     it("should handle high priority events", async () => {
       const events = await calendarManager.searchEvents("Critical");
-      
+
       expect(events.length).toBeGreaterThan(0);
       expect(events[0].summary).toContain("Critical");
       // Priority might be parsed into a separate field
@@ -205,10 +195,10 @@ describe("CalendarManager - Edge Cases", () => {
 
     it("should handle overlapping events correctly", async () => {
       const events = await calendarManager.searchEvents("Overlapping Meeting");
-      
+
       expect(events.length).toBe(2);
       const [event1, event2] = events;
-      
+
       // Check that both events exist and overlap in time
       expect(event1.start < event2.end && event2.start < event1.end).toBe(true);
     });
@@ -223,11 +213,11 @@ describe("CalendarManager - Edge Cases", () => {
 
     it("should properly identify all-day events", async () => {
       const events = await calendarManager.searchEvents("Company Holiday");
-      
+
       expect(events.length).toBeGreaterThan(0);
       const holiday = events[0];
       expect(holiday.isAllDay).toBe(true);
-      
+
       // All-day events are parsed as dates, check that it's marked as all-day
       expect(holiday.isAllDay).toBe(true);
     });
@@ -242,7 +232,7 @@ describe("CalendarManager - Edge Cases", () => {
 
     it("should handle events with reminders", async () => {
       const events = await calendarManager.searchEvents("Project Deadline");
-      
+
       expect(events.length).toBeGreaterThan(0);
       // Reminders might be parsed into description or ignored
     });
@@ -255,7 +245,7 @@ describe("CalendarManager - Edge Cases", () => {
       await calendarManager.subscribeCalendar(mockUrl, "Test Calendar", 30);
 
       const events = await calendarManager.searchEvents("zoom.us");
-      
+
       expect(events.length).toBeGreaterThan(0);
       expect(events[0].description).toContain("https://");
     });
@@ -266,7 +256,7 @@ describe("CalendarManager - Edge Cases", () => {
       await calendarManager.subscribeCalendar(mockUrl, "Test Calendar", 30);
 
       const events = await calendarManager.searchEvents("Complex Meeting");
-      
+
       expect(events.length).toBeGreaterThan(0);
       // Commas should be unescaped in the location
       expect(events[0].location).toContain(",");
@@ -280,15 +270,15 @@ describe("CalendarManager - Edge Cases", () => {
 VERSION:2.0
 PRODID:-//Test//Test//EN
 `;
-      
+
       // Add 100 events
       for (let i = 0; i < 100; i++) {
         const date = new Date(2025, 7, 15 + Math.floor(i / 10), i % 24);
         largeCalendar += `BEGIN:VEVENT
 UID:test-${i}@example.com
 SUMMARY:Event ${i}
-DTSTART:${date.toISOString().replace(/[-:]/g, '').split('.')[0]}Z
-DTEND:${new Date(date.getTime() + 3600000).toISOString().replace(/[-:]/g, '').split('.')[0]}Z
+DTSTART:${date.toISOString().replace(/[-:]/g, "").split(".")[0]}Z
+DTEND:${new Date(date.getTime() + 3600000).toISOString().replace(/[-:]/g, "").split(".")[0]}Z
 END:VEVENT
 `;
       }
@@ -299,16 +289,16 @@ END:VEVENT
 
       const startTime = Date.now();
       await calendarManager.subscribeCalendar(mockUrl, "Large Calendar", 30);
-      
+
       const events = await calendarManager.getEvents(
         new Date("2025-08-01"),
         new Date("2025-08-31"),
         "Large Calendar",
-        50
+        50,
       );
-      
+
       const endTime = Date.now();
-      
+
       expect(events.length).toBeLessThanOrEqual(50);
       expect(endTime - startTime).toBeLessThan(5000); // Should complete within 5 seconds
     });

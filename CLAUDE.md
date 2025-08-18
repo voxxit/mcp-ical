@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Initial Setup
 
-**IMPORTANT**: Before starting any development work, ensure husky hooks are installed:
+**IMPORTANT**: Before starting any development work, ensure husky hooks and Qlty are installed:
 
 ```bash
 npm install
 npm run prepare  # This installs the husky git hooks
+curl https://qlty.sh | sh  # Install Qlty code quality platform
 ```
 
 The repository has pre-commit hooks configured that will:
@@ -16,6 +17,7 @@ The repository has pre-commit hooks configured that will:
 - Run ESLint with auto-fix on staged TypeScript/JavaScript files
 - Run Prettier to format all staged files
 - Run TypeScript type checking on source files
+- Run Qlty code quality checks on all files
 
 These hooks are already configured and will run automatically on `git commit`.
 

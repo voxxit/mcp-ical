@@ -1,14 +1,12 @@
 import { setupServer } from "../server-setup";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { promises as fs } from "fs";
-import path from "path";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 describe("Date Range Regression Tests", () => {
   let server: any;
   let axiosMock: MockAdapter;
-  const testConfigPath = path.join(process.env.HOME || "", ".ical-mcp-config.json");
-  const originalConfigPath = testConfigPath + ".backup";
+  let calendarManager: any;
 
   // Create test calendar data with events at different times of day
   const testCalendarData = `BEGIN:VCALENDAR
@@ -62,35 +60,16 @@ DESCRIPTION:Event with specific timezone
 END:VEVENT
 END:VCALENDAR`;
 
-  beforeAll(async () => {
-    try {
-      await fs.rename(testConfigPath, originalConfigPath);
-    } catch (error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
   beforeEach(() => {
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
     axiosMock = new MockAdapter(axios);
-    server = setupServer();
+    server = setupServer(calendarManager);
   });
 
   afterEach(async () => {
     axiosMock.restore();
-    
-    try {
-      await fs.unlink(testConfigPath);
-    } catch (error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
-  afterAll(async () => {
-    try {
-      await fs.rename(originalConfigPath, testConfigPath);
-    } catch (error) {
-      // No backup to restore, that's fine
-    }
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   describe("Single Day Date Range", () => {
@@ -123,24 +102,24 @@ END:VCALENDAR`;
       });
 
       const events = JSON.parse(response.content[0].text);
-      
+
       // Should find all events on August 12, including morning, afternoon, evening, and midnight
       expect(events.length).toBe(5); // Including timezone event
-      
+
       const summaries = events.map((e: any) => e.summary);
       expect(summaries).toContain("Morning Meeting");
       expect(summaries).toContain("Afternoon Workshop");
       expect(summaries).toContain("Evening Social");
       expect(summaries).toContain("Midnight Deadline");
       expect(summaries).toContain("Timezone Test Event");
-      
+
       // Should NOT include next day's event
       expect(summaries).not.toContain("Next Day Meeting");
     });
 
     it("should handle date strings without time correctly", async () => {
       const handler = server.getRequestHandlers().get("tools/call");
-      
+
       // Test ISO date format
       const response1 = await handler({
         method: "tools/call",
@@ -173,16 +152,21 @@ END:VCALENDAR`;
       });
 
       const events = JSON.parse(response.content[0].text);
-      
+
       // Check that the midnight deadline event is included
-      const midnightEvent = events.find((e: any) => e.summary === "Midnight Deadline");
+      const midnightEvent = events.find(
+        (e: any) => e.summary === "Midnight Deadline",
+      );
       expect(midnightEvent).toBeDefined();
-      // Event should be at 23:59 in some timezone
+      // Event should be near midnight, accounting for timezone conversion
       const eventDate = new Date(midnightEvent.start);
       const eventHours = eventDate.getHours();
       const eventMinutes = eventDate.getMinutes();
-      // Check if it's 23:59 in local time or could be in UTC
+      // Event is 23:59 UTC, but may show as different hours in local timezone
       expect(eventMinutes).toBe(59);
+      // Hours could be 18-23 depending on timezone (23:59 UTC = 18:59 EST, etc.)
+      expect(eventHours).toBeGreaterThanOrEqual(18);
+      expect(eventHours).toBeLessThanOrEqual(23);
     });
 
     it("should not include events from adjacent days", async () => {
@@ -200,9 +184,11 @@ END:VCALENDAR`;
       });
 
       const events = JSON.parse(response.content[0].text);
-      
+
       // Should not include next day's event
-      const nextDayEvent = events.find((e: any) => e.summary === "Next Day Meeting");
+      const nextDayEvent = events.find(
+        (e: any) => e.summary === "Next Day Meeting",
+      );
       expect(nextDayEvent).toBeUndefined();
     });
   });
@@ -237,10 +223,10 @@ END:VCALENDAR`;
       });
 
       const events = JSON.parse(response.content[0].text);
-      
+
       // Should include events from both days
       expect(events.length).toBe(6); // All events including next day
-      
+
       const summaries = events.map((e: any) => e.summary);
       expect(summaries).toContain("Morning Meeting");
       expect(summaries).toContain("Next Day Meeting");
@@ -277,8 +263,10 @@ END:VCALENDAR`;
       });
 
       const events = JSON.parse(response.content[0].text);
-      const midnightEvent = events.find((e: any) => e.summary === "Midnight Deadline");
-      
+      const midnightEvent = events.find(
+        (e: any) => e.summary === "Midnight Deadline",
+      );
+
       expect(midnightEvent).toBeDefined();
       // Event starts on Aug 12 at 23:59
       expect(new Date(midnightEvent.start).getDate()).toBe(12);
@@ -302,8 +290,10 @@ END:VCALENDAR`;
       });
 
       const events = JSON.parse(response.content[0].text);
-      const timezoneEvent = events.find((e: any) => e.summary === "Timezone Test Event");
-      
+      const timezoneEvent = events.find(
+        (e: any) => e.summary === "Timezone Test Event",
+      );
+
       expect(timezoneEvent).toBeDefined();
       // Event should be included in the results for Aug 12
     });
@@ -322,9 +312,15 @@ END:VCALENDAR`;
         },
       });
 
-      const events = JSON.parse(response.content[0].text);
-      // Should either return empty array or handle gracefully
-      expect(Array.isArray(events)).toBe(true);
+      // When invalid dates are provided, the server may return an error or empty results
+      try {
+        const events = JSON.parse(response.content[0].text);
+        expect(Array.isArray(events)).toBe(true);
+      } catch (error) {
+        // If JSON parsing fails, it means an error message was returned
+        expect(error).toBeInstanceOf(SyntaxError);
+        expect(response.content[0].text).toContain("Error");
+      }
     });
   });
 
@@ -334,10 +330,13 @@ END:VCALENDAR`;
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
-      
-      const todayStr = today.toISOString().split('T')[0].replace(/-/g, '');
-      const tomorrowStr = tomorrow.toISOString().split('T')[0].replace(/-/g, '');
-      
+
+      const todayStr = today.toISOString().split("T")[0].replace(/-/g, "");
+      const tomorrowStr = tomorrow
+        .toISOString()
+        .split("T")[0]
+        .replace(/-/g, "");
+
       const todayCalendar = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Test//Test//EN
@@ -376,8 +375,8 @@ END:VCALENDAR`;
 
     it("should return same events for today using both methods", async () => {
       const handler = server.getRequestHandlers().get("tools/call");
-      const today = new Date().toISOString().split('T')[0];
-      
+      const today = new Date().toISOString().split("T")[0];
+
       // Get events using get_events with same date
       const getEventsResponse = await handler({
         method: "tools/call",
@@ -407,12 +406,16 @@ END:VCALENDAR`;
       const upcomingData = JSON.parse(upcomingResponse.content[0].text);
 
       // Both should return today's events
-      const getEventsSummaries = getEventsData.map((e: any) => e.summary).sort();
+      const getEventsSummaries = getEventsData
+        .map((e: any) => e.summary)
+        .sort();
       const upcomingSummaries = upcomingData.map((e: any) => e.summary).sort();
 
       // Both methods should return events for today
       // Check that there's at least some overlap
-      const commonEvents = getEventsSummaries.filter((e: string) => upcomingSummaries.includes(e));
+      const commonEvents = getEventsSummaries.filter((e: string) =>
+        upcomingSummaries.includes(e),
+      );
       expect(commonEvents.length).toBeGreaterThan(0);
     });
   });

@@ -16,14 +16,14 @@ export function setupServer(calendarManager?: CalendarManager): Server {
       capabilities: {
         tools: {},
       },
-    }
+    },
   );
 
   // Use provided CalendarManager or create a new one
   if (!calendarManager) {
     calendarManager = new CalendarManager();
   }
-  const timezoneManager = TimezoneManager.getInstance();
+  const _timezoneManager = TimezoneManager.getInstance();
 
   // Store handlers for testing
   const listToolsHandler = async () => ({
@@ -81,7 +81,8 @@ export function setupServer(calendarManager?: CalendarManager): Server {
           properties: {
             calendarName: {
               type: "string",
-              description: "Optional: specific calendar name (all calendars if not specified)",
+              description:
+                "Optional: specific calendar name (all calendars if not specified)",
             },
             startDate: {
               type: "string",
@@ -108,15 +109,18 @@ export function setupServer(calendarManager?: CalendarManager): Server {
           properties: {
             query: {
               type: "string",
-              description: "Text to search for in event summaries and descriptions",
+              description:
+                "Text to search for in event summaries and descriptions",
             },
             calendarName: {
               type: "string",
-              description: "Optional: specific calendar name (all calendars if not specified)",
+              description:
+                "Optional: specific calendar name (all calendars if not specified)",
             },
             startDate: {
               type: "string",
-              description: "Optional: start date for search range in ISO format",
+              description:
+                "Optional: start date for search range in ISO format",
             },
             endDate: {
               type: "string",
@@ -134,7 +138,8 @@ export function setupServer(calendarManager?: CalendarManager): Server {
           properties: {
             calendarName: {
               type: "string",
-              description: "Optional: specific calendar name (all calendars if not specified)",
+              description:
+                "Optional: specific calendar name (all calendars if not specified)",
             },
             days: {
               type: "number",
@@ -151,17 +156,20 @@ export function setupServer(calendarManager?: CalendarManager): Server {
       },
       {
         name: "get_daily_agenda",
-        description: "Get today's agenda for working hours (9 AM - 5 PM) in the current timezone",
+        description:
+          "Get today's agenda for working hours (9 AM - 5 PM) in the current timezone",
         inputSchema: {
           type: "object",
           properties: {
             date: {
               type: "string",
-              description: "Optional: specific date in ISO format (YYYY-MM-DD). Defaults to today.",
+              description:
+                "Optional: specific date in ISO format (YYYY-MM-DD). Defaults to today.",
             },
             calendarName: {
               type: "string",
-              description: "Optional: specific calendar name (all calendars if not specified)",
+              description:
+                "Optional: specific calendar name (all calendars if not specified)",
             },
             startHour: {
               type: "number",
@@ -186,7 +194,11 @@ export function setupServer(calendarManager?: CalendarManager): Server {
       switch (name) {
         case "subscribe_calendar": {
           const { url, name: calendarName, refreshInterval = 60 } = args as any;
-          await calendarManager.subscribeCalendar(url, calendarName, refreshInterval);
+          await calendarManager.subscribeCalendar(
+            url,
+            calendarName,
+            refreshInterval,
+          );
           return {
             content: [
               {
@@ -203,11 +215,12 @@ export function setupServer(calendarManager?: CalendarManager): Server {
             content: [
               {
                 type: "text",
-                text: calendars.length > 0
-                  ? `Subscribed calendars:\n${calendars
-                      .map((cal) => `- ${cal.name} (${cal.url})`)
-                      .join("\n")}`
-                  : "No calendars subscribed",
+                text:
+                  calendars.length > 0
+                    ? `Subscribed calendars:\n${calendars
+                        .map((cal) => `- ${cal.name} (${cal.url})`)
+                        .join("\n")}`
+                    : "No calendars subscribed",
               },
             ],
           };
@@ -228,54 +241,84 @@ export function setupServer(calendarManager?: CalendarManager): Server {
 
         case "get_events": {
           const { calendarName, startDate, endDate, limit = 50 } = args as any;
-          // Parse dates in local timezone, not UTC
-          const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-          const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
           
-          // Create dates in local timezone
-          const start = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
-          const end = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
+          // Use TimezoneDateManager for proper timezone-aware date parsing
+          const { TimezoneDateManager } = await import('./timezone-date-manager.js');
+          const tzManager = new TimezoneDateManager();
           
-          const events = await calendarManager.getEvents(
-            start,
-            end,
-            calendarName,
-            limit
-          );
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(events, null, 2),
-              },
-            ],
-          };
+          try {
+            // Parse dates using Temporal for proper timezone handling
+            const startZoned = tzManager.parseDate(startDate);
+            const endZoned = tzManager.getEndOfDay(endDate);
+
+            // Convert to Date objects for existing calendarManager interface
+            const events = await calendarManager.getEvents(
+              new Date(startZoned.epochMilliseconds),
+              new Date(endZoned.epochMilliseconds),
+              calendarName,
+              limit,
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(events, null, 2),
+                },
+              ],
+            };
+          } catch (dateError) {
+            throw new Error(`Invalid date format: ${dateError instanceof Error ? dateError.message : String(dateError)}`);
+          }
         }
 
         case "search_events": {
           const { query, calendarName, startDate, endDate } = args as any;
-          const events = await calendarManager.searchEvents(
-            query,
-            calendarName,
-            startDate ? new Date(startDate) : undefined,
-            endDate ? new Date(endDate) : undefined
-          );
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(events, null, 2),
-              },
-            ],
-          };
+          
+          // Use TimezoneDateManager for proper timezone-aware date parsing
+          const { TimezoneDateManager } = await import('./timezone-date-manager.js');
+          const tzManager = new TimezoneDateManager();
+          
+          try {
+            // Parse optional date range using Temporal
+            const start = startDate ? new Date(tzManager.parseDate(startDate).epochMilliseconds) : undefined;
+            const end = endDate ? new Date(tzManager.getEndOfDay(endDate).epochMilliseconds) : undefined;
+            
+            const events = await calendarManager.searchEvents(
+              query,
+              calendarName,
+              start,
+              end,
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(events, null, 2),
+                },
+              ],
+            };
+          } catch (dateError) {
+            throw new Error(`Invalid date format: ${dateError instanceof Error ? dateError.message : String(dateError)}`);
+          }
         }
 
         case "get_upcoming_events": {
           const { calendarName, days = 7, limit = 20 } = args as any;
-          const events = await calendarManager.getUpcomingEvents(
-            days,
+          
+          // Use TimezoneDateManager for proper timezone-aware date calculations
+          const { TimezoneDateManager } = await import('./timezone-date-manager.js');
+          const tzManager = new TimezoneDateManager();
+          
+          // Calculate date range using Temporal
+          const now = tzManager.now();
+          const endDate = now.add({ days });
+          
+          // Convert to Date objects for existing calendarManager interface
+          const events = await calendarManager.getEvents(
+            new Date(now.epochMilliseconds),
+            new Date(endDate.epochMilliseconds),
             calendarName,
-            limit
+            limit,
           );
           return {
             content: [
@@ -288,81 +331,84 @@ export function setupServer(calendarManager?: CalendarManager): Server {
         }
 
         case "get_daily_agenda": {
-          const { date, calendarName, startHour = 9, endHour = 17 } = args as any;
-          
-          // Get the server's timezone
-          const timezone = timezoneManager.getTimezone();
-          
+          const {
+            date,
+            calendarName,
+            startHour = 9,
+            endHour = 17,
+          } = args as any;
+
+          // Import the new timezone date manager
+          const { TimezoneDateManager } = await import('./timezone-date-manager.js');
+          const tzManager = new TimezoneDateManager();
+
           // Use provided date or today
-          let targetDate: Date;
-          if (date) {
-            // Parse the date string and interpret it in the local timezone
-            const [year, month, day] = date.split('-').map(Number);
-            targetDate = new Date(year, month - 1, day);
-          } else {
-            targetDate = new Date();
-          }
-          
-          // Create start and end times for the working day
-          const workdayStart = new Date(targetDate);
-          workdayStart.setHours(startHour, 0, 0, 0);
-          
-          const workdayEnd = new Date(targetDate);
-          workdayEnd.setHours(endHour, 0, 0, 0);
-          
-          // Get all events for the entire day (to catch events that might overlap)
-          const dayStart = new Date(targetDate);
-          dayStart.setHours(0, 0, 0, 0);
-          
-          const dayEnd = new Date(targetDate);
-          dayEnd.setHours(23, 59, 59, 999);
-          
+          const targetDate = date || tzManager.now().toPlainDate().toString();
+
+          // Get all events for the entire day
+          const dayStart = tzManager.parseDate(targetDate);
+          const dayEnd = tzManager.getEndOfDay(targetDate);
+
+          // Convert to Date objects for existing calendarManager interface
           const allDayEvents = await calendarManager.getEvents(
-            dayStart,
-            dayEnd,
-            calendarName
+            new Date(dayStart.epochMilliseconds),
+            new Date(dayEnd.epochMilliseconds),
+            calendarName,
           );
-          
-          // Filter to only include events during working hours
-          const workingHourEvents = allDayEvents.filter(event => {
-            const eventStart = new Date(event.start);
-            const eventEnd = new Date(event.end);
-            
-            // Include event if it overlaps with working hours
-            return eventStart < workdayEnd && eventEnd > workdayStart;
+
+          // Filter events using proper timezone-aware logic
+          const workingHourEvents = allDayEvents.filter((event) => {
+            // Convert calendar manager event to node-ical format for parsing
+            const nodeIcalEvent = {
+              start: event.start,
+              end: event.end,
+              summary: event.summary,
+              uid: event.id
+            } as any;
+
+            return tzManager.eventOverlapsWorkingHours(
+              nodeIcalEvent,
+              targetDate,
+              startHour,
+              endHour
+            );
           });
-          
-          // Sort by start time
-          workingHourEvents.sort((a, b) => 
-            new Date(a.start).getTime() - new Date(b.start).getTime()
+
+          // Sort by start time (events already have Date objects)
+          workingHourEvents.sort(
+            (a, b) => a.start.getTime() - b.start.getTime(),
           );
+
+          // Format the response with proper timezone info
+          const workingHours = tzManager.createWorkingHours(targetDate, startHour, endHour);
           
-          // Format the response with timezone info
           const agendaInfo = {
-            date: timezoneManager.formatDate(targetDate, { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              weekday: 'long'
+            date: tzManager.formatDate(workingHours.start, {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              weekday: "long",
             }),
-            timezone: timezone,
+            timezone: tzManager.getTimezone(),
             workingHours: `${startHour}:00 - ${endHour}:00`,
             totalEvents: workingHourEvents.length,
-            events: workingHourEvents.map(event => ({
-              ...event,
-              startTime: timezoneManager.formatDate(event.start, {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-              }),
-              endTime: timezoneManager.formatDate(event.end, {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-              })
-            }))
+            events: workingHourEvents.map((event) => {
+              const eventStart = tzManager.parseCalendarEventStart({
+                start: event.start
+              } as any);
+              const eventEnd = tzManager.parseCalendarEventEnd({
+                start: event.start,
+                end: event.end
+              } as any);
+
+              return {
+                ...event,
+                startTime: tzManager.formatTime(eventStart),
+                endTime: tzManager.formatTime(eventEnd),
+              };
+            }),
           };
-          
+
           return {
             content: [
               {
@@ -377,6 +423,7 @@ export function setupServer(calendarManager?: CalendarManager): Server {
           throw new Error(`Unknown tool: ${name}`);
       }
     } catch (error) {
+      console.error('Tool error:', error);
       return {
         content: [
           {

@@ -39,6 +39,7 @@ jobs:
         run: |
           npm ci
           npm run prepare
+          curl https://qlty.sh | sh
 
       - name: Run Claude Code
         id: claude
@@ -64,7 +65,7 @@ jobs:
 
           # Optional: Add custom instructions for Claude to customize its behavior for your project
           custom_instructions: |
-            Important: Husky git hooks have been pre-installed. When committing changes, lint-staged will automatically run ESLint and Prettier on staged files.
+            Important: Husky git hooks and Qlty have been pre-installed. When committing changes, lint-staged will automatically run ESLint, Prettier, and Qlty checks on staged files.
             The pre-commit hook is already set up and will format code automatically.
             Do not reinstall or reconfigure husky unless there's an issue.
 
