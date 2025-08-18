@@ -47,3 +47,9 @@ jobs:
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: true
+
+      - name: Upload coverage to Qlty
+        uses: qltysh/qlty-action/coverage@v2
+        with:
+          token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+          files: ./coverage/lcov.info
