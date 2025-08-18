@@ -17,7 +17,7 @@ export async function cleanupTestConfig(calendarManager?: CalendarManager) {
   if (calendarManager) {
     // Clear in-memory subscriptions
     (calendarManager as any).subscriptions.clear();
-    
+
     // Clear cache
     (calendarManager as any).cache.flushAll();
 
@@ -49,7 +49,7 @@ export async function cleanupTestConfig(calendarManager?: CalendarManager) {
 export function resetSingletonState() {
   // Reset SecurityConfigManager singleton
   (SecurityConfigManager as any).instance = undefined;
-  
+
   // Note: TimezoneManager singleton doesn't need resetting as it's stateless
 }
 
@@ -57,15 +57,17 @@ export function resetSingletonState() {
 export function createIsolatedTestEnvironment() {
   // Reset singleton state before creating new instances
   resetSingletonState();
-  
+
   // Create isolated calendar manager
   const calendarManager = createTestCalendarManager();
-  
+
   return { calendarManager };
 }
 
 // Helper to cleanup isolated test environment
-export async function cleanupIsolatedTestEnvironment(calendarManager: CalendarManager) {
+export async function cleanupIsolatedTestEnvironment(
+  calendarManager: CalendarManager,
+) {
   await cleanupTestConfig(calendarManager);
   resetSingletonState();
 }

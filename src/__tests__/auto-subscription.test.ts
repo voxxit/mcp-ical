@@ -4,7 +4,10 @@ import { setupServer } from "../server-setup";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
 import { promises as fs } from "fs";
-import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
+import {
+  createIsolatedTestEnvironment,
+  cleanupIsolatedTestEnvironment,
+} from "./test-helpers";
 
 describe("Auto-subscription functionality", () => {
   let calendarManager: CalendarManager;
@@ -42,7 +45,9 @@ DTEND:20250115T110000Z
 END:VEVENT
 END:VCALENDAR`;
 
-    axiosMock.onGet("https://example.com/calendar.ics").reply(200, mockCalendarData);
+    axiosMock
+      .onGet("https://example.com/calendar.ics")
+      .reply(200, mockCalendarData);
 
     // Simulate auto-subscription (as done in index.ts)
     await calendarManager.subscribeCalendar(
@@ -88,7 +93,9 @@ DTEND:20250115T150000Z
 END:VEVENT
 END:VCALENDAR`;
 
-    axiosMock.onGet("https://example.com/auto-calendar.ics").reply(200, mockCalendarData);
+    axiosMock
+      .onGet("https://example.com/auto-calendar.ics")
+      .reply(200, mockCalendarData);
 
     // Simulate auto-subscription
     await calendarManager.subscribeCalendar(
@@ -131,7 +138,9 @@ DTEND:20250116T110000Z
 END:VEVENT
 END:VCALENDAR`;
 
-    axiosMock.onGet("https://example.com/persist.ics").reply(200, mockCalendarData);
+    axiosMock
+      .onGet("https://example.com/persist.ics")
+      .reply(200, mockCalendarData);
 
     // Simulate auto-subscription
     await calendarManager.subscribeCalendar(

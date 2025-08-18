@@ -3,7 +3,10 @@ import { SecurityConfigManager } from "../security-config";
 import { TimezoneManager } from "../timezone-manager";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
+import {
+  createIsolatedTestEnvironment,
+  cleanupIsolatedTestEnvironment,
+} from "./test-helpers";
 
 describe("Security Tests", () => {
   let calendarManager: CalendarManager;

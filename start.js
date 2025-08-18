@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // Simple startup script that shows instructions if run directly
-const { spawn } = require('child_process');
-const path = require('path');
+const { spawn } = require("child_process");
+const path = require("path");
 
 if (require.main === module) {
   console.log(`
@@ -27,7 +27,7 @@ if (require.main === module) {
 ║     "mcpServers": {                                                ║
 ║       "ical-mcp": {                                                ║
 ║         "command": "node",                                         ║
-║         "args": ["${path.resolve(__dirname, 'dist/index.js')}"],   ║
+║         "args": ["${path.resolve(__dirname, "dist/index.js")}"],   ║
 ║         "env": {                                                   ║
 ║           "CALENDAR_URL": "your-calendar-url.ics"                  ║
 ║         }                                                          ║
@@ -42,15 +42,15 @@ if (require.main === module) {
 
 Current installation path: ${__dirname}
 `);
-  
+
   // If they really want to run it directly for testing
-  if (process.argv.includes('--test')) {
-    const child = spawn('node', [path.join(__dirname, 'dist/index.js')], {
-      stdio: 'inherit',
-      env: { ...process.env }
+  if (process.argv.includes("--test")) {
+    const child = spawn("node", [path.join(__dirname, "dist/index.js")], {
+      stdio: "inherit",
+      env: { ...process.env },
     });
-    
-    child.on('exit', (code) => {
+
+    child.on("exit", (code) => {
       process.exit(code);
     });
   }

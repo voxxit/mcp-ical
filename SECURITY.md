@@ -17,16 +17,18 @@ This release addresses multiple critical security vulnerabilities identified in 
 #### 🔴 Critical Fixes
 
 ##### 1. Command Injection Vulnerability
+
 - **Location**: `src/timezone-manager.ts:45-102`
 - **Risk Level**: HIGH
 - **Issue**: Arbitrary command execution through `execSync()` calls
-- **Fix**: 
+- **Fix**:
   - Replaced `execSync('cat /etc/timezone')` with `fs.readFileSync('/etc/timezone')`
   - Replaced `execSync('readlink /etc/localtime')` with `fs.readlinkSync('/etc/localtime')`
   - Removed all shell command execution for timezone detection
   - Now uses Node.js native APIs exclusively for system information
 
 ##### 2. Server-Side Request Forgery (SSRF) Protection
+
 - **Location**: `src/calendar-manager.ts:125-142`
 - **Risk Level**: MEDIUM-HIGH
 - **Issue**: Could fetch from internal networks, localhost, or cloud metadata endpoints
@@ -41,6 +43,7 @@ This release addresses multiple critical security vulnerabilities identified in 
 #### 🟡 Medium Risk Fixes
 
 ##### 3. Input Validation & Sanitization
+
 - **Issue**: Path traversal, injection attacks, resource exhaustion
 - **Fixes**:
   - Added `validateCalendarName()` with strict alphanumeric + limited special chars validation
@@ -50,6 +53,7 @@ This release addresses multiple critical security vulnerabilities identified in 
   - Added bounds checking for all user inputs
 
 ##### 4. Resource Exhaustion Protection
+
 - **Issue**: DoS through unlimited resource consumption
 - **Fixes**:
   - Limited maximum calendar subscriptions to 10 per instance (configurable)
@@ -60,6 +64,7 @@ This release addresses multiple critical security vulnerabilities identified in 
   - Enhanced cache configuration with automatic cleanup
 
 ##### 5. Error Handling & Information Disclosure
+
 - **Issue**: Sensitive information leakage through error messages
 - **Fixes**:
   - Added `sanitizeErrorMessage()` function
@@ -71,6 +76,7 @@ This release addresses multiple critical security vulnerabilities identified in 
 #### 🟢 Low Risk Fixes
 
 ##### 6. Security Configuration & Environment Validation
+
 - **Additions**:
   - Created `SecurityConfigManager` class for centralized security configuration
   - Added environment variable validation on startup
@@ -82,18 +88,18 @@ This release addresses multiple critical security vulnerabilities identified in 
 
 ### Environment Variables for Security Configuration
 
-| Variable | Default | Min | Max | Description |
-|----------|---------|-----|-----|-------------|
-| `ICAL_MAX_CALENDARS` | 10 | 1 | 50 | Maximum calendar subscriptions |
-| `ICAL_MAX_CACHE_SIZE` | 100 | 10 | 1000 | Maximum cache entries |
-| `ICAL_MAX_URL_LENGTH` | 2048 | 100 | 4096 | Maximum URL length |
-| `ICAL_MAX_NAME_LENGTH` | 100 | 1 | 200 | Maximum calendar name length |
-| `ICAL_MAX_QUERY_LENGTH` | 1000 | 1 | 2000 | Maximum search query length |
-| `ICAL_MAX_DATE_RANGE_DAYS` | 365 | 1 | 1095 | Maximum date range in days |
-| `ICAL_MAX_RRULE_OCCURRENCES` | 1000 | 1 | 5000 | Maximum RRULE occurrences |
-| `ICAL_RRULE_TIMEOUT_MS` | 5000 | 1000 | 30000 | RRULE processing timeout |
-| `ICAL_FETCH_TIMEOUT_MS` | 30000 | 5000 | 120000 | HTTP fetch timeout |
-| `ICAL_MAX_CONTENT_SIZE_MB` | 10 | 1 | 100 | Maximum content size in MB |
+| Variable                     | Default | Min  | Max    | Description                    |
+| ---------------------------- | ------- | ---- | ------ | ------------------------------ |
+| `ICAL_MAX_CALENDARS`         | 10      | 1    | 50     | Maximum calendar subscriptions |
+| `ICAL_MAX_CACHE_SIZE`        | 100     | 10   | 1000   | Maximum cache entries          |
+| `ICAL_MAX_URL_LENGTH`        | 2048    | 100  | 4096   | Maximum URL length             |
+| `ICAL_MAX_NAME_LENGTH`       | 100     | 1    | 200    | Maximum calendar name length   |
+| `ICAL_MAX_QUERY_LENGTH`      | 1000    | 1    | 2000   | Maximum search query length    |
+| `ICAL_MAX_DATE_RANGE_DAYS`   | 365     | 1    | 1095   | Maximum date range in days     |
+| `ICAL_MAX_RRULE_OCCURRENCES` | 1000    | 1    | 5000   | Maximum RRULE occurrences      |
+| `ICAL_RRULE_TIMEOUT_MS`      | 5000    | 1000 | 30000  | RRULE processing timeout       |
+| `ICAL_FETCH_TIMEOUT_MS`      | 30000   | 5000 | 120000 | HTTP fetch timeout             |
+| `ICAL_MAX_CONTENT_SIZE_MB`   | 10      | 1    | 100    | Maximum content size in MB     |
 
 ### Security Validations
 
@@ -135,7 +141,7 @@ If you discover a security vulnerability, please follow these steps:
 - **Acknowledgment**: Within 24 hours
 - **Initial Assessment**: Within 72 hours
 - **Status Updates**: Weekly until resolved
-- **Resolution Timeline**: 
+- **Resolution Timeline**:
   - Critical: 24-48 hours
   - High: 1 week
   - Medium: 2-4 weeks
@@ -144,6 +150,7 @@ If you discover a security vulnerability, please follow these steps:
 ### Responsible Disclosure
 
 We ask that you:
+
 - Give us reasonable time to fix the issue before public disclosure
 - Avoid accessing, modifying, or deleting data that doesn't belong to you
 - Do not perform attacks that degrade the service for other users
@@ -184,6 +191,7 @@ We ask that you:
 ## Compliance
 
 This implementation follows security best practices from:
+
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [Node.js Security Best Practices](https://nodejs.org/en/docs/guides/security/)
 - [npm Security Best Practices](https://docs.npmjs.com/packages-and-modules/securing-your-code)
