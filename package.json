@@ -1,0 +1,62 @@
+{
+  "name": "@voxxit/mcp-ical",
+  "version": "1.0.2",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-ical": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js",
+    "setup": "node start.js",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:manual": "tsc && node dist/test.js",
+    "prepublishOnly": "npm run build && npm test",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "mcp",
+    "ical",
+    "calendar",
+    "modelcontextprotocol",
+    "claude"
+  ],
+  "author": "Josh Delsman",
+  "license": "MIT",
+  "description": "Model Context Protocol server for iCalendar (.ics) subscriptions with local caching and calendar event queries",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voxxit/mcp-ical.git"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.2",
+    "axios": "^1.11.0",
+    "node-cache": "^5.1.2",
+    "node-ical": "^0.20.1",
+    "rrule": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/nock": "^10.0.3",
+    "@types/node": "^24.2.1",
+    "axios-mock-adapter": "^2.1.0",
+    "husky": "^9.1.7",
+    "jest": "^30.0.5",
+    "lint-staged": "^16.1.5",
+    "nock": "^14.0.9",
+    "prettier": "3.6.2",
+    "ts-jest": "^29.4.1",
+    "typescript": "^5.9.2"
+  }
+}

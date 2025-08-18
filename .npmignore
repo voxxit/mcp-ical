@@ -1,0 +1,45 @@
+# Source files
+src/
+*.ts
+!dist/*.d.ts
+
+# Test files
+__tests__/
+*.test.ts
+*.test.js
+jest.config.js
+coverage/
+
+# Development files
+.env
+.env.local
+*.log
+.DS_Store
+node_modules/
+.vscode/
+.idea/
+
+# Config files for development
+tsconfig.json
+.eslintrc
+.prettierrc
+.gitignore
+.editorconfig
+
+# Examples and documentation source
+examples/
+docs/
+*.md
+!README.md
+
+# Build artifacts
+*.tsbuildinfo
+
+# Local config files
+.ical-mcp-config.json
+.test-ical-config.json
+claude-desktop-config.example.json
+mcp.json
+
+# Scripts
+start.js
