@@ -141,8 +141,8 @@ export class SecurityConfigManager {
       }
     }
 
-    // Security warnings for development
-    if (!this.config.production) {
+    // Security warnings for development (but not in tests)
+    if (!this.config.production && process.env.NODE_ENV !== "test") {
       console.warn(
         "⚠️ Running in development mode - verbose error messages enabled",
       );
