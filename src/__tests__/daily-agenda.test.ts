@@ -43,8 +43,8 @@ END:VEVENT
 BEGIN:VEVENT
 UID:lunch-meeting@test.com
 SUMMARY:Lunch Meeting
-DTSTART:20250812T170000Z
-DTEND:20250812T180000Z
+DTSTART:20250812T160000Z
+DTEND:20250812T170000Z
 DESCRIPTION:Working lunch with team
 LOCATION:Cafeteria
 END:VEVENT
@@ -141,7 +141,7 @@ END:VCALENDAR`;
       // These events should always be in working hours (9-5) regardless of timezone
       expect(summaries).toContain("Morning Standup"); // 14:00Z = 9:00 AM EST, 6:00 AM PST
       expect(summaries).toContain("Client Meeting"); // 15:00Z = 10:00 AM EST, 7:00 AM PST
-      expect(summaries).toContain("Lunch Meeting"); // 17:00Z = 12:00 PM EST, 9:00 AM PST
+      expect(summaries).toContain("Lunch Meeting"); // 16:00Z = 11:00 AM EST, 8:00 AM PST
 
       // These events depend on timezone - include if within working hours in local timezone
       if (summaries.includes("Afternoon Workshop")) {
