@@ -7,7 +7,10 @@ import path from "path";
 describe("Daily Agenda Tool Tests", () => {
   let server: any;
   let axiosMock: MockAdapter;
-  const testConfigPath = path.join(process.env.HOME || "", ".ical-mcp-config.json");
+  const testConfigPath = path.join(
+    process.env.HOME || "",
+    ".ical-mcp-config.json",
+  );
   const originalConfigPath = testConfigPath + ".backup";
 
   // Create test calendar with events throughout the day
@@ -91,7 +94,7 @@ END:VCALENDAR`;
   beforeAll(async () => {
     try {
       await fs.rename(testConfigPath, originalConfigPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist, that's fine
     }
   });
@@ -103,10 +106,10 @@ END:VCALENDAR`;
 
   afterEach(async () => {
     axiosMock.restore();
-    
+
     try {
       await fs.unlink(testConfigPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist, that's fine
     }
   });
@@ -114,7 +117,7 @@ END:VCALENDAR`;
   afterAll(async () => {
     try {
       await fs.rename(originalConfigPath, testConfigPath);
-    } catch (error) {
+    } catch (_error) {
       // No backup to restore, that's fine
     }
   });
@@ -148,11 +151,11 @@ END:VCALENDAR`;
       });
 
       const agenda = JSON.parse(response.content[0].text);
-      
+
       expect(agenda.timezone).toBeDefined();
       expect(agenda.workingHours).toBe("9:00 - 17:00");
       expect(agenda.totalEvents).toBeGreaterThan(0);
-      
+
       // Should include events during work hours
       const summaries = agenda.events.map((e: any) => e.summary);
       expect(summaries).toContain("Morning Standup");
@@ -160,7 +163,7 @@ END:VCALENDAR`;
       expect(summaries).toContain("Lunch Meeting");
       expect(summaries).toContain("Afternoon Workshop");
       expect(summaries).toContain("End of Day Review");
-      
+
       // Should NOT include events outside work hours
       expect(summaries).not.toContain("Early Morning Gym");
       expect(summaries).not.toContain("Evening Social");
@@ -181,7 +184,7 @@ END:VCALENDAR`;
 
       const agenda = JSON.parse(response.content[0].text);
       const summaries = agenda.events.map((e: any) => e.summary);
-      
+
       // Should include the meeting that starts at 8:30 and ends at 9:30
       expect(summaries).toContain("Long Meeting");
     });
@@ -202,9 +205,9 @@ END:VCALENDAR`;
       });
 
       const agenda = JSON.parse(response.content[0].text);
-      
+
       expect(agenda.workingHours).toBe("6:00 - 14:00");
-      
+
       const summaries = agenda.events.map((e: any) => e.summary);
       // Should now include early morning event
       expect(summaries).toContain("Early Morning Gym");
@@ -226,7 +229,7 @@ END:VCALENDAR`;
       });
 
       const agenda = JSON.parse(response.content[0].text);
-      
+
       expect(agenda.date).toBeDefined();
       expect(agenda.timezone).toBeDefined();
       // Should use today's date
@@ -248,12 +251,12 @@ END:VCALENDAR`;
       });
 
       const agenda = JSON.parse(response.content[0].text);
-      
+
       // Should have detected a timezone
       expect(agenda.timezone).toBeDefined();
       expect(typeof agenda.timezone).toBe("string");
       expect(agenda.timezone.length).toBeGreaterThan(0);
-      
+
       // Common timezone formats include "America/New_York", "Europe/London", etc.
       expect(agenda.timezone).toMatch(/^[A-Za-z]+\/[A-Za-z_]+$/);
     });
@@ -272,7 +275,7 @@ END:VCALENDAR`;
       });
 
       const agenda = JSON.parse(response.content[0].text);
-      
+
       // Check that events are sorted chronologically
       for (let i = 1; i < agenda.events.length; i++) {
         const prevStart = new Date(agenda.events[i - 1].start).getTime();
@@ -295,7 +298,7 @@ END:VCALENDAR`;
       });
 
       const agenda = JSON.parse(response.content[0].text);
-      
+
       // All-day events might or might not be included depending on implementation
       // but should not cause errors
       expect(agenda).toBeDefined();
@@ -333,7 +336,7 @@ END:VCALENDAR`;
       });
 
       const agenda = JSON.parse(response.content[0].text);
-      
+
       expect(agenda.totalEvents).toBe(0);
       expect(agenda.events).toEqual([]);
     });

@@ -1,4 +1,4 @@
-import { readFileSync, readlinkSync } from 'fs';
+import { readFileSync, readlinkSync } from "fs";
 
 export class TimezoneManager {
   private static instance: TimezoneManager;
@@ -8,13 +8,15 @@ export class TimezoneManager {
     // Check TZ environment variable first (UNIX standard)
     if (process.env.TZ) {
       this.timezone = process.env.TZ;
-      if (process.env.NODE_ENV !== 'test') {
-        console.error(`Using timezone from TZ environment variable: ${this.timezone}`);
+      if (process.env.NODE_ENV !== "test") {
+        console.error(
+          `Using timezone from TZ environment variable: ${this.timezone}`,
+        );
       }
     } else {
       // Try to detect system timezone
       this.timezone = this.detectSystemTimezone();
-      if (process.env.NODE_ENV !== 'test') {
+      if (process.env.NODE_ENV !== "test") {
         console.error(`Detected system timezone: ${this.timezone}`);
       }
     }
@@ -34,23 +36,23 @@ export class TimezoneManager {
       if (detectedTz) {
         return detectedTz;
       }
-    } catch (error) {
+    } catch (_error) {
       // Intl API failed
     }
 
     try {
       // Method 2: Check /etc/timezone (Linux) - safe file read
-      const timezone = readFileSync('/etc/timezone', 'utf8').trim();
+      const timezone = readFileSync("/etc/timezone", "utf8").trim();
       if (timezone) {
         return timezone;
       }
-    } catch (error) {
+    } catch (_error) {
       // Not Linux or file doesn't exist
     }
 
     try {
       // Method 3: Check /etc/localtime symlink (Linux/Unix) - safe symlink read
-      const localtime = readlinkSync('/etc/localtime');
+      const localtime = readlinkSync("/etc/localtime");
       if (localtime) {
         // Extract timezone from path like /usr/share/zoneinfo/America/New_York
         const match = localtime.match(/zoneinfo\/(.+)$/);
@@ -58,13 +60,13 @@ export class TimezoneManager {
           return match[1];
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Not Unix or symlink doesn't exist
     }
 
     // Default fallback - removed unsafe command execution methods
-    console.error('Warning: Could not detect timezone, defaulting to UTC');
-    return 'UTC';
+    console.error("Warning: Could not detect timezone, defaulting to UTC");
+    return "UTC";
   }
 
   getTimezone(): string {
@@ -75,17 +77,19 @@ export class TimezoneManager {
    * Convert a date to the server's timezone
    */
   toLocalDate(date: Date | string): Date {
-    if (typeof date === 'string') {
+    if (typeof date === "string") {
       date = new Date(date);
     }
-    
+
     // If we're already in the correct timezone, return as-is
-    if (this.timezone === 'UTC') {
+    if (this.timezone === "UTC") {
       return date;
     }
 
     // Create a date in the target timezone
-    const localDateStr = date.toLocaleString('en-US', { timeZone: this.timezone });
+    const localDateStr = date.toLocaleString("en-US", {
+      timeZone: this.timezone,
+    });
     return new Date(localDateStr);
   }
 
@@ -112,14 +116,17 @@ export class TimezoneManager {
   /**
    * Format a date in the server's timezone
    */
-  formatDate(date: Date | string, options?: Intl.DateTimeFormatOptions): string {
-    if (typeof date === 'string') {
+  formatDate(
+    date: Date | string,
+    options?: Intl.DateTimeFormatOptions,
+  ): string {
+    if (typeof date === "string") {
       date = new Date(date);
     }
-    
-    return date.toLocaleString('en-US', {
+
+    return date.toLocaleString("en-US", {
       timeZone: this.timezone,
-      ...options
+      ...options,
     });
   }
 

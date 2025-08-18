@@ -13,6 +13,7 @@ export default [
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
+        project: "./tsconfig.json",
       },
       globals: {
         console: "readonly",
@@ -28,6 +29,8 @@ export default [
         clearTimeout: "readonly",
         setInterval: "readonly",
         clearInterval: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
       },
     },
     plugins: {
@@ -41,12 +44,50 @@ export default [
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { argsIgnorePattern: "^_" },
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
       ],
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", "*.test.ts", "*.test.js"],
+    files: ["**/*.test.ts", "**/*.test.js", "**/*.spec.ts", "**/*.spec.js"],
+    languageOptions: {
+      globals: {
+        describe: "readonly",
+        it: "readonly",
+        expect: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+        jest: "readonly",
+        test: "readonly",
+      },
+    },
+  },
+  {
+    files: ["**/*.js"],
+    languageOptions: {
+      sourceType: "commonjs",
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        exports: "writable",
+        module: "writable",
+        require: "readonly",
+        global: "readonly",
+      },
+    },
+  },
+  {
+    ignores: ["dist/**", "node_modules/**", "coverage/**"],
   },
 ];

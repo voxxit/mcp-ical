@@ -1,10 +1,8 @@
-import { CalendarManager } from "../calendar-manager";
 import { setupServer } from "../server-setup";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
 import { promises as fs } from "fs";
 import path from "path";
-import { CallToolRequest, ListToolsRequest } from "@modelcontextprotocol/sdk/types.js";
 
 // Mock calendar response data
 const mockCalendarData = `BEGIN:VCALENDAR
@@ -39,14 +37,17 @@ END:VCALENDAR`;
 describe("MCP Server Tools", () => {
   let server: any;
   let axiosMock: MockAdapter;
-  const testConfigPath = path.join(process.env.HOME || "", ".ical-mcp-config.json");
+  const testConfigPath = path.join(
+    process.env.HOME || "",
+    ".ical-mcp-config.json",
+  );
   const originalConfigPath = testConfigPath + ".backup";
 
   beforeAll(async () => {
     // Backup existing config if it exists
     try {
       await fs.rename(testConfigPath, originalConfigPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist, that's fine
     }
   });
@@ -59,11 +60,11 @@ describe("MCP Server Tools", () => {
 
   afterEach(async () => {
     axiosMock.restore();
-    
+
     // Clean up test config
     try {
       await fs.unlink(testConfigPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist, that's fine
     }
   });
@@ -72,7 +73,7 @@ describe("MCP Server Tools", () => {
     // Restore original config if it existed
     try {
       await fs.rename(originalConfigPath, testConfigPath);
-    } catch (error) {
+    } catch (_error) {
       // No backup to restore, that's fine
     }
   });
@@ -122,7 +123,7 @@ describe("MCP Server Tools", () => {
       axiosMock.onGet(mockUrl).reply(200, mockCalendarData);
 
       const handler = server.getRequestHandlers().get("tools/call");
-      
+
       // First subscription
       await handler({
         method: "tools/call",
@@ -165,7 +166,7 @@ describe("MCP Server Tools", () => {
       axiosMock.onGet(mockUrl).reply(200, mockCalendarData);
 
       const handler = server.getRequestHandlers().get("tools/call");
-      
+
       // Subscribe first
       await handler({
         method: "tools/call",
@@ -195,7 +196,7 @@ describe("MCP Server Tools", () => {
       axiosMock.onGet(mockUrl).reply(200, mockCalendarData);
 
       const handler = server.getRequestHandlers().get("tools/call");
-      
+
       // Subscribe first
       await handler({
         method: "tools/call",
@@ -319,10 +320,13 @@ describe("MCP Server Tools", () => {
       const events = JSON.parse(response.content[0].text);
       expect(Array.isArray(events)).toBe(true);
       expect(events.length).toBeGreaterThan(0);
-      expect(events.every((e: any) => 
-        e.summary.toLowerCase().includes("meeting") || 
-        e.description?.toLowerCase().includes("meeting")
-      )).toBe(true);
+      expect(
+        events.every(
+          (e: any) =>
+            e.summary.toLowerCase().includes("meeting") ||
+            e.description?.toLowerCase().includes("meeting"),
+        ),
+      ).toBe(true);
     });
 
     it("should support date range filtering", async () => {
@@ -340,11 +344,15 @@ describe("MCP Server Tools", () => {
       });
 
       const events = JSON.parse(response.content[0].text);
-      expect(events.every((e: any) => {
-        const eventDate = new Date(e.start);
-        return eventDate >= new Date("2025-08-15") && 
-               eventDate <= new Date("2025-08-16");
-      })).toBe(true);
+      expect(
+        events.every((e: any) => {
+          const eventDate = new Date(e.start);
+          return (
+            eventDate >= new Date("2025-08-15") &&
+            eventDate <= new Date("2025-08-16")
+          );
+        }),
+      ).toBe(true);
     });
   });
 
@@ -407,7 +415,7 @@ describe("MCP Server Tools", () => {
 
       expect(response.tools).toBeDefined();
       expect(response.tools.length).toBe(7);
-      
+
       const toolNames = response.tools.map((t: any) => t.name);
       expect(toolNames).toContain("subscribe_calendar");
       expect(toolNames).toContain("list_calendars");

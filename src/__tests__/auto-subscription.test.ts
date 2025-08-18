@@ -3,23 +3,22 @@ import { setupServer } from "../server-setup";
 import nock from "nock";
 import fs from "fs/promises";
 import path from "path";
-import os from "os";
 
 describe("Auto-subscription functionality", () => {
   let calendarManager: CalendarManager;
   let server: any;
   let configPath: string;
-  
+
   beforeEach(async () => {
     // Clean up any existing config
-    const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-    configPath = path.join(homeDir, '.ical-mcp-config.json');
+    const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+    configPath = path.join(homeDir, ".ical-mcp-config.json");
     try {
       await fs.unlink(configPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist, that's fine
     }
-    
+
     // Create a shared CalendarManager instance (mimicking index.ts)
     calendarManager = new CalendarManager();
     server = setupServer(calendarManager);
@@ -29,7 +28,7 @@ describe("Auto-subscription functionality", () => {
     // Clean up config after each test
     try {
       await fs.unlink(configPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist, that's fine
     }
     nock.cleanAll();
@@ -58,7 +57,7 @@ END:VCALENDAR`;
     await calendarManager.subscribeCalendar(
       "https://example.com/calendar.ics",
       "Auto Calendar",
-      60
+      60,
     );
 
     // Verify calendar is subscribed
@@ -68,20 +67,21 @@ END:VCALENDAR`;
 
     // Now test that server tools see the same calendar
     const handlers = (server as any).getRequestHandlers();
-    const listToolsHandler = handlers.get("tools/list");
     const callToolHandler = handlers.get("tools/call");
 
     // Call list_calendars tool
     const listResponse = await callToolHandler({
       params: {
         name: "list_calendars",
-        arguments: {}
-      }
+        arguments: {},
+      },
     });
 
     // Verify the tool sees the auto-subscribed calendar
     expect(listResponse.content[0].text).toContain("Auto Calendar");
-    expect(listResponse.content[0].text).toContain("https://example.com/calendar.ics");
+    expect(listResponse.content[0].text).toContain(
+      "https://example.com/calendar.ics",
+    );
   });
 
   it("should allow server tools to access events from auto-subscribed calendar", async () => {
@@ -108,7 +108,7 @@ END:VCALENDAR`;
     await calendarManager.subscribeCalendar(
       "https://example.com/auto-calendar.ics",
       "Auto Test Calendar",
-      60
+      60,
     );
 
     // Get events using the server tool
@@ -121,9 +121,9 @@ END:VCALENDAR`;
         arguments: {
           startDate: "2025-01-15",
           endDate: "2025-01-15",
-          calendarName: "Auto Test Calendar"
-        }
-      }
+          calendarName: "Auto Test Calendar",
+        },
+      },
     });
 
     const events = JSON.parse(eventsResponse.content[0].text);
@@ -156,14 +156,16 @@ END:VCALENDAR`;
     await calendarManager.subscribeCalendar(
       "https://example.com/persist.ics",
       "Persistent Calendar",
-      60
+      60,
     );
 
     // Verify it's saved to disk
-    const configData = await fs.readFile(configPath, 'utf-8');
+    const configData = await fs.readFile(configPath, "utf-8");
     const config = JSON.parse(configData);
     expect(config["Persistent Calendar"]).toBeDefined();
-    expect(config["Persistent Calendar"].url).toBe("https://example.com/persist.ics");
+    expect(config["Persistent Calendar"].url).toBe(
+      "https://example.com/persist.ics",
+    );
 
     // Create a new CalendarManager and server (simulating restart)
     const newCalendarManager = new CalendarManager();
@@ -183,9 +185,9 @@ END:VCALENDAR`;
         name: "get_events",
         arguments: {
           startDate: "2025-01-16",
-          endDate: "2025-01-16"
-        }
-      }
+          endDate: "2025-01-16",
+        },
+      },
     });
 
     const events = JSON.parse(eventsResponse.content[0].text);

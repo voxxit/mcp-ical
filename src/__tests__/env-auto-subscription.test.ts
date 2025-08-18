@@ -6,14 +6,14 @@ import path from "path";
 
 describe("Environment Variable Auto-subscription", () => {
   let configPath: string;
-  
+
   beforeEach(async () => {
     // Clean up any existing config
-    const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-    configPath = path.join(homeDir, '.ical-mcp-config.json');
+    const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+    configPath = path.join(homeDir, ".ical-mcp-config.json");
     try {
       await fs.unlink(configPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist, that's fine
     }
   });
@@ -22,7 +22,7 @@ describe("Environment Variable Auto-subscription", () => {
     // Clean up config after each test
     try {
       await fs.unlink(configPath);
-    } catch (error) {
+    } catch (_error) {
       // File doesn't exist, that's fine
     }
     nock.cleanAll();
@@ -50,15 +50,15 @@ END:VCALENDAR`;
     // Simulate the index.ts flow
     // 1. Create CalendarManager instance
     const calendarManager = new CalendarManager();
-    
+
     // 2. Pass it to setupServer
     const server = setupServer(calendarManager);
-    
+
     // 3. Use the same instance for auto-subscription
     await calendarManager.subscribeCalendar(
       "https://example.com/env-calendar.ics",
       "Env Test Calendar",
-      60
+      60,
     );
 
     // 4. Verify the server tools see the same calendar
@@ -69,14 +69,16 @@ END:VCALENDAR`;
     const listResponse = await callToolHandler({
       params: {
         name: "list_calendars",
-        arguments: {}
-      }
+        arguments: {},
+      },
     });
 
     // Should see the auto-subscribed calendar
     expect(listResponse.content[0].text).toContain("Env Test Calendar");
-    expect(listResponse.content[0].text).toContain("https://example.com/env-calendar.ics");
-    
+    expect(listResponse.content[0].text).toContain(
+      "https://example.com/env-calendar.ics",
+    );
+
     // The calendar manager should have exactly one calendar
     const calendars = calendarManager.listCalendars();
     expect(calendars).toHaveLength(1);
