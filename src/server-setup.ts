@@ -4,7 +4,20 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { CalendarManager } from "./calendar-manager.js";
-// import { TimezoneManager } from "./timezone-manager.js"; // Deprecated - use TimezoneDateManager
+/**
+ * Construct and configure a Server for the iCalendar MCP integration.
+ *
+ * Creates a Server prewired with calendar-related tool handlers (tools/list and tools/call),
+ * optionally using the provided CalendarManager (or creating one when omitted). The server
+ * exposes handlers for subscribing/unsubscribing calendars, listing calendars, querying and
+ * searching events, retrieving upcoming events, and producing a daily working-hours agenda.
+ *
+ * The returned Server has the tool request handlers registered and includes a testing helper
+ * method `getRequestHandlers()` (attached at runtime) that returns a Map of the registered
+ * endpoints ("tools/list" and "tools/call") to their handler functions.
+ *
+ * @returns A configured Server instance with calendar tool handlers registered.
+ */
 
 export function setupServer(calendarManager?: CalendarManager): Server {
   const server = new Server(
