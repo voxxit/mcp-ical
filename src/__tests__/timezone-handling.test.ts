@@ -138,9 +138,11 @@ END:VCALENDAR`;
     });
 
     it("should handle events that cross midnight in their local timezone", async () => {
+      // Query for events on Aug 12-13 to capture the late NY event
+      // which starts at 11 PM EST on Aug 12 (3 AM UTC on Aug 13)
       const events = await calendarManager.getEvents(
         new Date("2025-08-12"),
-        new Date("2025-08-12T23:59:59"),
+        new Date("2025-08-13T23:59:59"),
         "Timezone Calendar",
       );
 
