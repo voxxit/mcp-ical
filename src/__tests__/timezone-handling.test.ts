@@ -1,7 +1,10 @@
 import { CalendarManager } from "../calendar-manager";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
+import {
+  createIsolatedTestEnvironment,
+  cleanupIsolatedTestEnvironment,
+} from "./test-helpers";
 
 describe("Timezone Handling Tests", () => {
   let calendarManager: CalendarManager;
@@ -126,7 +129,9 @@ END:VCALENDAR`;
       expect(nyEvent).toBeDefined();
 
       // 9 AM EST in August should be 1 PM UTC (13:00) due to EDT
-      const nyEventUTCHour = nyEvent!.start.getUTCHours();
+      const nyEventUTCHour = nyEvent!.start
+        .toInstant()
+        .toZonedDateTimeISO("UTC").hour;
       // Note: This might be 13 or 14 depending on DST handling
       expect(nyEventUTCHour).toBeGreaterThanOrEqual(13);
       expect(nyEventUTCHour).toBeLessThanOrEqual(14);
@@ -151,7 +156,9 @@ END:VCALENDAR`;
         const endDate = lateEvent.end;
 
         // The event should span across midnight
-        expect(endDate.getTime()).toBeGreaterThan(startDate.getTime());
+        expect(
+          Temporal.ZonedDateTime.compare(endDate, startDate),
+        ).toBeGreaterThan(0);
       }
     });
   });
@@ -180,13 +187,31 @@ END:VCALENDAR`;
       // All returned events should have start times within the queried range
       events.forEach((event) => {
         // The event should start on or after the start date
-        expect(event.start.getTime()).toBeGreaterThanOrEqual(
-          aug12Start.getTime() - 86400000,
-        ); // Allow 1 day buffer for timezone differences
-        // And before or at the end date + 1 day for timezone differences
-        expect(event.start.getTime()).toBeLessThanOrEqual(
-          aug12End.getTime() + 86400000,
+        const startInstant = Temporal.Instant.fromEpochMilliseconds(
+          aug12Start.getTime(),
         );
+        const endInstant = Temporal.Instant.fromEpochMilliseconds(
+          aug12End.getTime(),
+        );
+        const dayBuffer = Temporal.Duration.from({ days: 1 });
+
+        expect(
+          Temporal.ZonedDateTime.compare(
+            event.start,
+            startInstant
+              .toZonedDateTimeISO(event.start.timeZoneId)
+              .subtract(dayBuffer),
+          ),
+        ).toBeGreaterThanOrEqual(0);
+        // And before or at the end date + 1 day for timezone differences
+        expect(
+          Temporal.ZonedDateTime.compare(
+            event.start,
+            endInstant
+              .toZonedDateTimeISO(event.start.timeZoneId)
+              .add(dayBuffer),
+          ),
+        ).toBeLessThanOrEqual(0);
       });
     });
 
@@ -205,7 +230,7 @@ END:VCALENDAR`;
       // Floating time events should be interpreted in local time
       if (floatingEvent) {
         // The hour should be 9 (as specified in the event)
-        const eventHour = floatingEvent.start.getHours();
+        const eventHour = floatingEvent.start.hour;
         // This could be 9 in local time or adjusted for UTC
         expect(eventHour).toBeDefined();
       }

@@ -31,6 +31,7 @@ export default [
         clearInterval: "readonly",
         URL: "readonly",
         URLSearchParams: "readonly",
+        Temporal: "readonly",
       },
     },
     plugins: {
@@ -67,6 +68,7 @@ export default [
         afterAll: "readonly",
         jest: "readonly",
         test: "readonly",
+        Temporal: "readonly",
       },
     },
   },

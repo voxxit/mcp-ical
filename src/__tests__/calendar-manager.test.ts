@@ -1,9 +1,13 @@
+import "temporal-polyfill/global";
 import { CalendarManager } from "../calendar-manager";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
 import { promises as fs } from "fs";
 import path from "path";
-import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
+import {
+  createIsolatedTestEnvironment,
+  cleanupIsolatedTestEnvironment,
+} from "./test-helpers";
 
 describe("CalendarManager", () => {
   let calendarManager: CalendarManager;
@@ -141,7 +145,21 @@ describe("CalendarManager", () => {
 
       expect(events.length).toBeGreaterThan(0);
       expect(
-        events.every((e) => e.start >= startDate && e.start <= endDate),
+        events.every(
+          (e) =>
+            Temporal.ZonedDateTime.compare(
+              e.start,
+              Temporal.Instant.fromEpochMilliseconds(
+                startDate.getTime(),
+              ).toZonedDateTimeISO(e.start.timeZoneId),
+            ) >= 0 &&
+            Temporal.ZonedDateTime.compare(
+              e.start,
+              Temporal.Instant.fromEpochMilliseconds(
+                endDate.getTime(),
+              ).toZonedDateTimeISO(e.start.timeZoneId),
+            ) <= 0,
+        ),
       ).toBe(true);
     });
 
@@ -219,7 +237,21 @@ describe("CalendarManager", () => {
       );
 
       expect(
-        events.every((e) => e.start >= startDate && e.start <= endDate),
+        events.every(
+          (e) =>
+            Temporal.ZonedDateTime.compare(
+              e.start,
+              Temporal.Instant.fromEpochMilliseconds(
+                startDate.getTime(),
+              ).toZonedDateTimeISO(e.start.timeZoneId),
+            ) >= 0 &&
+            Temporal.ZonedDateTime.compare(
+              e.start,
+              Temporal.Instant.fromEpochMilliseconds(
+                endDate.getTime(),
+              ).toZonedDateTimeISO(e.start.timeZoneId),
+            ) <= 0,
+        ),
       ).toBe(true);
     });
 
@@ -253,8 +285,16 @@ describe("CalendarManager", () => {
 
       expect(events.length).toBeGreaterThan(0);
       // Events should be in the future
-      const now = new Date();
-      expect(events.some((e) => new Date(e.start) >= now)).toBe(true);
+      const now = Temporal.Now.instant();
+      expect(
+        events.some(
+          (e) =>
+            Temporal.ZonedDateTime.compare(
+              e.start,
+              now.toZonedDateTimeISO(e.start.timeZoneId),
+            ) >= 0,
+        ),
+      ).toBe(true);
     });
 
     it("should respect limit parameter", async () => {
@@ -274,9 +314,9 @@ describe("CalendarManager", () => {
       );
 
       for (let i = 1; i < events.length; i++) {
-        expect(events[i].start.getTime()).toBeGreaterThanOrEqual(
-          events[i - 1].start.getTime(),
-        );
+        expect(
+          Temporal.ZonedDateTime.compare(events[i].start, events[i - 1].start),
+        ).toBeGreaterThanOrEqual(0);
       }
     });
   });
@@ -311,10 +351,10 @@ describe("CalendarManager", () => {
       expect(axiosMock.history.get.length).toBe(2);
     });
 
-    it.skip("should refresh cache when expired", async () => {
+    it("should refresh cache when expired", async () => {
       const mockUrl = "https://example.com/calendar.ics";
 
-      // Setup mock to be called twice
+      // Setup mock to be called multiple times
       axiosMock.onGet(mockUrl).reply(200, mockIcsContent);
 
       // Subscribe with minimum refresh interval (1 minute)
@@ -327,10 +367,10 @@ describe("CalendarManager", () => {
         "Test Calendar",
       );
 
-      // Wait for cache to expire
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Manually clear the cache to simulate expiration
+      (calendarManager as any).cache.flushAll();
 
-      // Second call should fetch again
+      // Second call should fetch again since cache is cleared
       const events = await calendarManager.getEvents(
         new Date("2025-08-01"),
         new Date("2025-08-31"),

@@ -1,9 +1,11 @@
+import "temporal-polyfill/global";
 import axios from "axios";
 import * as ical from "node-ical";
 import NodeCache from "node-cache";
 import { promises as fs } from "fs";
 import path from "path";
-import { TimezoneManager } from "./timezone-manager.js";
+// import { TimezoneManager } from "./timezone-manager.js"; // Deprecated - use TimezoneDateManager
+import { TimezoneDateManager } from "./timezone-date-manager.js";
 import { RRule, rrulestr } from "rrule";
 import { isIP } from "net";
 import { SecurityConfigManager } from "./security-config.js";
@@ -19,6 +21,21 @@ interface CalendarEvent {
   id: string;
   summary: string;
   description?: string;
+  start: Temporal.ZonedDateTime;
+  end: Temporal.ZonedDateTime;
+  location?: string;
+  organizer?: string;
+  attendees?: string[];
+  calendarName: string;
+  isAllDay: boolean;
+  recurrence?: any;
+}
+
+// Backward compatibility: Legacy CalendarEvent with Date objects
+interface LegacyCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
   start: Date;
   end: Date;
   location?: string;
@@ -29,11 +46,21 @@ interface CalendarEvent {
   recurrence?: any;
 }
 
+// Utility functions for backward compatibility
+function temporalEventToLegacy(event: CalendarEvent): LegacyCalendarEvent {
+  return {
+    ...event,
+    start: new Date(event.start.epochMilliseconds),
+    end: new Date(event.end.epochMilliseconds),
+  };
+}
+
 export class CalendarManager {
   private cache: NodeCache;
   private subscriptions: Map<string, CalendarSubscription>;
   private configPath: string;
-  private timezoneManager: TimezoneManager;
+  // private timezoneManager: TimezoneManager; // Deprecated - use TimezoneDateManager
+  private timezoneDateManager: TimezoneDateManager;
   private securityConfig: SecurityConfigManager;
 
   constructor(configPath?: string) {
@@ -49,7 +76,9 @@ export class CalendarManager {
       checkperiod: 600, // Check for expired keys every 10 minutes
     });
     this.subscriptions = new Map();
-    this.timezoneManager = TimezoneManager.getInstance();
+
+    // TimezoneDateManager for Temporal API operations
+    this.timezoneDateManager = new TimezoneDateManager();
 
     // Set up config path
     if (configPath) {
@@ -405,75 +434,90 @@ export class CalendarManager {
       return null;
     }
 
-    // Parse start and end dates
-    let start: Date;
-    let end: Date;
+    try {
+      // Use TimezoneDateManager for proper Temporal parsing
+      const start = this.timezoneDateManager.parseCalendarEventStart(vevent);
+      const end = this.timezoneDateManager.parseCalendarEventEnd(vevent);
 
-    // Handle different date formats
-    if (vevent.start instanceof Date) {
-      start = vevent.start;
-    } else if (typeof vevent.start === "string") {
-      start = new Date(vevent.start);
-    } else if (
-      vevent.start &&
-      typeof vevent.start === "object" &&
-      "dateTime" in (vevent.start as any)
-    ) {
-      // Handle complex date objects from node-ical
-      start = new Date((vevent.start as any).dateTime || vevent.start);
-    } else {
-      start = new Date(vevent.start);
+      return {
+        id: vevent.uid || `${calendarName}-${start.epochMilliseconds}`,
+        summary: vevent.summary,
+        description: vevent.description,
+        start,
+        end,
+        location: vevent.location,
+        organizer:
+          typeof vevent.organizer === "string"
+            ? vevent.organizer
+            : vevent.organizer?.val,
+        attendees: vevent.attendee
+          ? (Array.isArray(vevent.attendee)
+              ? vevent.attendee
+              : [vevent.attendee]
+            ).map((a) => (typeof a === "string" ? a : a.val))
+          : undefined,
+        calendarName,
+        isAllDay: vevent.datetype === "date",
+        recurrence: vevent.rrule,
+      };
+    } catch (error) {
+      console.warn(
+        `Failed to parse event: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return null;
     }
+  }
 
-    if (vevent.end instanceof Date) {
-      end = vevent.end;
-    } else if (vevent.end) {
-      if (typeof vevent.end === "string") {
-        end = new Date(vevent.end);
-      } else if (
-        typeof vevent.end === "object" &&
-        "dateTime" in (vevent.end as any)
-      ) {
-        end = new Date((vevent.end as any).dateTime || vevent.end);
-      } else {
-        end = new Date(vevent.end);
-      }
-    } else {
-      // Default to 1 hour duration if no end time
-      end = new Date(start.getTime() + 3600000);
-    }
+  // Legacy method for backward compatibility
+  private parseEventLegacy(
+    vevent: ical.VEvent,
+    calendarName: string,
+  ): LegacyCalendarEvent | null {
+    const temporalEvent = this.parseEvent(vevent, calendarName);
+    if (!temporalEvent) return null;
 
-    return {
-      id: vevent.uid || `${calendarName}-${start.getTime()}`,
-      summary: vevent.summary,
-      description: vevent.description,
-      start,
-      end,
-      location: vevent.location,
-      organizer:
-        typeof vevent.organizer === "string"
-          ? vevent.organizer
-          : vevent.organizer?.val,
-      attendees: vevent.attendee
-        ? (Array.isArray(vevent.attendee)
-            ? vevent.attendee
-            : [vevent.attendee]
-          ).map((a) => (typeof a === "string" ? a : a.val))
-        : undefined,
-      calendarName,
-      isAllDay: vevent.datetype === "date",
-      recurrence: vevent.rrule,
-    };
+    return temporalEventToLegacy(temporalEvent);
   }
 
   async getEvents(
-    startDate: Date,
-    endDate: Date,
+    startDate: Date | Temporal.ZonedDateTime | string,
+    endDate: Date | Temporal.ZonedDateTime | string,
     calendarName?: string,
     limit: number = 50,
   ): Promise<CalendarEvent[]> {
-    // Validate inputs
-    this.validateDateRange(startDate, endDate);
+    // Convert inputs to Temporal for consistent processing
+    let startTemporal: Temporal.ZonedDateTime;
+    let endTemporal: Temporal.ZonedDateTime;
+
+    if (startDate instanceof Date) {
+      const instant = Temporal.Instant.fromEpochMilliseconds(
+        startDate.getTime(),
+      );
+      startTemporal = instant.toZonedDateTimeISO(
+        this.timezoneDateManager.getTimezone(),
+      );
+    } else if (typeof startDate === "string") {
+      startTemporal = this.timezoneDateManager.parseDate(startDate);
+    } else {
+      startTemporal = startDate;
+    }
+
+    if (endDate instanceof Date) {
+      const instant = Temporal.Instant.fromEpochMilliseconds(endDate.getTime());
+      endTemporal = instant.toZonedDateTimeISO(
+        this.timezoneDateManager.getTimezone(),
+      );
+    } else if (typeof endDate === "string") {
+      endTemporal = this.timezoneDateManager.getEndOfDay(endDate);
+    } else {
+      endTemporal = endDate;
+    }
+
+    // Validate inputs using legacy Date objects for existing validation
+    this.validateDateRange(
+      new Date(startTemporal.epochMilliseconds),
+      new Date(endTemporal.epochMilliseconds),
+    );
 
     if (limit < 1 || limit > 1000) {
       throw new Error("Limit must be between 1 and 1000");
@@ -515,14 +559,19 @@ export class CalendarManager {
               const expandedEvents = this.expandRecurringEvent(
                 vevent,
                 name,
-                startDate,
-                endDate,
+                startTemporal,
+                endTemporal,
               );
               allEvents.push(...expandedEvents);
             } else {
               // Single event
               const event = this.parseEvent(vevent, name);
-              if (event && event.start >= startDate && event.start <= endDate) {
+              if (
+                event &&
+                Temporal.ZonedDateTime.compare(event.start, startTemporal) >=
+                  0 &&
+                Temporal.ZonedDateTime.compare(event.start, endTemporal) <= 0
+              ) {
                 allEvents.push(event);
               }
             }
@@ -538,17 +587,17 @@ export class CalendarManager {
       }
     }
 
-    // Sort by start date and apply limit
+    // Sort by start date using Temporal comparison and apply limit
     return allEvents
-      .sort((a, b) => a.start.getTime() - b.start.getTime())
+      .sort((a, b) => Temporal.ZonedDateTime.compare(a.start, b.start))
       .slice(0, limit);
   }
 
   async searchEvents(
     query: string,
     calendarName?: string,
-    startDate?: Date,
-    endDate?: Date,
+    startDate?: Date | Temporal.ZonedDateTime | string,
+    endDate?: Date | Temporal.ZonedDateTime | string,
   ): Promise<CalendarEvent[]> {
     // Validate inputs
     this.validateSearchQuery(query);
@@ -560,8 +609,46 @@ export class CalendarManager {
       }
     }
 
-    if (startDate && endDate) {
-      this.validateDateRange(startDate, endDate);
+    // Convert date inputs to Temporal for consistent processing
+    let startTemporal: Temporal.ZonedDateTime | undefined;
+    let endTemporal: Temporal.ZonedDateTime | undefined;
+
+    if (startDate) {
+      if (startDate instanceof Date) {
+        const instant = Temporal.Instant.fromEpochMilliseconds(
+          startDate.getTime(),
+        );
+        startTemporal = instant.toZonedDateTimeISO(
+          this.timezoneDateManager.getTimezone(),
+        );
+      } else if (typeof startDate === "string") {
+        startTemporal = this.timezoneDateManager.parseDate(startDate);
+      } else {
+        startTemporal = startDate;
+      }
+    }
+
+    if (endDate) {
+      if (endDate instanceof Date) {
+        const instant = Temporal.Instant.fromEpochMilliseconds(
+          endDate.getTime(),
+        );
+        endTemporal = instant.toZonedDateTimeISO(
+          this.timezoneDateManager.getTimezone(),
+        );
+      } else if (typeof endDate === "string") {
+        endTemporal = this.timezoneDateManager.getEndOfDay(endDate);
+      } else {
+        endTemporal = endDate;
+      }
+    }
+
+    // Validate date range using legacy Date objects for existing validation
+    if (startTemporal && endTemporal) {
+      this.validateDateRange(
+        new Date(startTemporal.epochMilliseconds),
+        new Date(endTemporal.epochMilliseconds),
+      );
     }
 
     const calendarsToCheck = calendarName
@@ -580,9 +667,17 @@ export class CalendarManager {
             const event = this.parseEvent(value as ical.VEvent, name);
             if (!event) continue;
 
-            // Check date range if provided
-            if (startDate && event.start < startDate) continue;
-            if (endDate && event.start > endDate) continue;
+            // Check date range if provided using Temporal comparison
+            if (
+              startTemporal &&
+              Temporal.ZonedDateTime.compare(event.start, startTemporal) < 0
+            )
+              continue;
+            if (
+              endTemporal &&
+              Temporal.ZonedDateTime.compare(event.start, endTemporal) > 0
+            )
+              continue;
 
             // Search in summary and description
             const summaryMatch = event.summary
@@ -603,7 +698,9 @@ export class CalendarManager {
       }
     }
 
-    return searchResults.sort((a, b) => a.start.getTime() - b.start.getTime());
+    return searchResults.sort((a, b) =>
+      Temporal.ZonedDateTime.compare(a.start, b.start),
+    );
   }
 
   async getUpcomingEvents(
@@ -611,8 +708,9 @@ export class CalendarManager {
     calendarName?: string,
     limit: number = 20,
   ): Promise<CalendarEvent[]> {
-    const now = new Date();
-    const endDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    // Use Temporal for proper timezone-aware date calculations
+    const now = this.timezoneDateManager.now();
+    const endDate = now.add({ days });
 
     return this.getEvents(now, endDate, calendarName, limit);
   }
@@ -620,8 +718,8 @@ export class CalendarManager {
   private expandRecurringEvent(
     vevent: ical.VEvent,
     calendarName: string,
-    rangeStart: Date,
-    rangeEnd: Date,
+    rangeStart: Temporal.ZonedDateTime,
+    rangeEnd: Temporal.ZonedDateTime,
   ): CalendarEvent[] {
     const events: CalendarEvent[] = [];
     const startTime = Date.now();
@@ -630,41 +728,12 @@ export class CalendarManager {
     const MAX_OCCURRENCES = config.maxRRuleOccurrences;
 
     try {
-      // Get the base event start date
-      let dtstart: Date;
-      if (vevent.start instanceof Date) {
-        dtstart = vevent.start;
-      } else if (typeof vevent.start === "string") {
-        dtstart = new Date(vevent.start);
-      } else if (
-        vevent.start &&
-        typeof vevent.start === "object" &&
-        "dateTime" in (vevent.start as any)
-      ) {
-        dtstart = new Date((vevent.start as any).dateTime || vevent.start);
-      } else {
-        dtstart = new Date(vevent.start);
-      }
+      // Use TimezoneDateManager to parse event dates consistently
+      const dtstart = this.timezoneDateManager.parseCalendarEventStart(vevent);
+      const dtend = this.timezoneDateManager.parseCalendarEventEnd(vevent);
 
-      // Calculate event duration
-      let dtend: Date;
-      if (vevent.end instanceof Date) {
-        dtend = vevent.end;
-      } else if (vevent.end) {
-        if (typeof vevent.end === "string") {
-          dtend = new Date(vevent.end);
-        } else if (
-          typeof vevent.end === "object" &&
-          "dateTime" in (vevent.end as any)
-        ) {
-          dtend = new Date((vevent.end as any).dateTime || vevent.end);
-        } else {
-          dtend = new Date(vevent.end);
-        }
-      } else {
-        dtend = new Date(dtstart.getTime() + 3600000); // 1 hour default
-      }
-      const duration = dtend.getTime() - dtstart.getTime();
+      // Calculate event duration using Temporal
+      const duration = dtend.since(dtstart);
 
       // Parse the RRULE
       let rrule: RRule;
@@ -687,18 +756,21 @@ export class CalendarManager {
               RRule.SA,
               RRule.SU,
             ];
-            byweekday = (Array.isArray(rruleOptions.byweekday)
-              ? rruleOptions.byweekday
-              : [rruleOptions.byweekday]
+            byweekday = (
+              Array.isArray(rruleOptions.byweekday)
+                ? rruleOptions.byweekday
+                : [rruleOptions.byweekday]
             )
               .map((day: number | { weekday: number }) => {
                 const dayNum = typeof day === "number" ? day : day.weekday;
-                return dayNum >= 0 && dayNum <= 6 ? weekdayMap[dayNum] : undefined;
+                return dayNum >= 0 && dayNum <= 6
+                  ? weekdayMap[dayNum]
+                  : undefined;
               })
               .filter(Boolean);
           }
 
-          // Create RRule with proper dtstart
+          // Create RRule with proper dtstart - RRule expects Date objects
           rrule = new RRule({
             freq: rruleOptions.freq,
             interval: rruleOptions.interval || 1,
@@ -707,7 +779,7 @@ export class CalendarManager {
               ? new Date(rruleOptions.until)
               : undefined,
             count: rruleOptions.count,
-            dtstart: dtstart, // Use the actual event start date
+            dtstart: new Date(dtstart.epochMilliseconds), // Convert Temporal to Date for RRule
             wkst: rruleOptions.wkst,
             bymonth: rruleOptions.bymonth,
             bymonthday: rruleOptions.bymonthday,
@@ -724,8 +796,12 @@ export class CalendarManager {
         return [];
       }
 
-      // Get occurrences within the date range
-      const occurrences = rrule.between(rangeStart, rangeEnd, true);
+      // Get occurrences within the date range - RRule expects Date objects
+      const occurrences = rrule.between(
+        new Date(rangeStart.epochMilliseconds),
+        new Date(rangeEnd.epochMilliseconds),
+        true,
+      );
 
       // Limit occurrences to prevent memory exhaustion
       const limitedOccurrences = occurrences.slice(0, MAX_OCCURRENCES);
@@ -740,8 +816,14 @@ export class CalendarManager {
           break;
         }
 
-        const eventStart = occurrence;
-        const eventEnd = new Date(occurrence.getTime() + duration);
+        // Convert Date occurrence to Temporal and add duration
+        const occurrenceInstant = Temporal.Instant.fromEpochMilliseconds(
+          occurrence.getTime(),
+        );
+        const eventStart = occurrenceInstant.toZonedDateTimeISO(
+          this.timezoneDateManager.getTimezone(),
+        );
+        const eventEnd = eventStart.add(duration);
 
         events.push({
           id: `${vevent.uid}-${occurrence.getTime()}`,
