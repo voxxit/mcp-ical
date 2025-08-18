@@ -257,8 +257,8 @@ END:VCALENDAR`;
       expect(typeof agenda.timezone).toBe("string");
       expect(agenda.timezone.length).toBeGreaterThan(0);
 
-      // Common timezone formats include "America/New_York", "Europe/London", etc.
-      expect(agenda.timezone).toMatch(/^[A-Za-z]+\/[A-Za-z_]+$/);
+      // Common timezone formats include "America/New_York", "Europe/London", or "UTC"
+      expect(agenda.timezone).toMatch(/^([A-Za-z]+\/[A-Za-z_]+|UTC)$/);
     });
 
     it("should return events sorted by start time", async () => {
