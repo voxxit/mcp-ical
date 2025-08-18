@@ -3,7 +3,7 @@ import { SecurityConfigManager } from "../security-config";
 import { TimezoneManager } from "../timezone-manager";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { createTestCalendarManager, cleanupTestConfig } from "./test-helpers";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 describe("Security Tests", () => {
   let calendarManager: CalendarManager;
@@ -11,14 +11,15 @@ describe("Security Tests", () => {
   let axiosMock: MockAdapter;
 
   beforeEach(() => {
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
     axiosMock = new MockAdapter(axios);
-    calendarManager = createTestCalendarManager();
     securityConfig = SecurityConfigManager.getInstance();
   });
 
   afterEach(async () => {
     axiosMock.restore();
-    await cleanupTestConfig(calendarManager);
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   describe("Command Injection Prevention", () => {

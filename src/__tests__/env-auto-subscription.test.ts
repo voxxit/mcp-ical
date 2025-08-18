@@ -1,31 +1,28 @@
 import { CalendarManager } from "../calendar-manager";
 import { setupServer } from "../server-setup";
-import nock from "nock";
-import fs from "fs/promises";
-import path from "path";
+import MockAdapter from "axios-mock-adapter";
+import axios from "axios";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 describe("Environment Variable Auto-subscription", () => {
-  let configPath: string;
+  let calendarManager: CalendarManager;
+  let axiosMock: MockAdapter;
 
   beforeEach(async () => {
-    // Clean up any existing config
-    const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    configPath = path.join(homeDir, ".ical-mcp-config.json");
-    try {
-      await fs.unlink(configPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
+    // Create isolated test environment
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
+
+    // Setup axios mock
+    axiosMock = new MockAdapter(axios);
   });
 
   afterEach(async () => {
-    // Clean up config after each test
-    try {
-      await fs.unlink(configPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-    nock.cleanAll();
+    // Restore axios
+    axiosMock.restore();
+
+    // Clean up isolated test environment
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   it("should ensure auto-subscription uses the same CalendarManager instance as server tools", async () => {
@@ -41,16 +38,11 @@ DTEND:20250115T110000Z
 END:VEVENT
 END:VCALENDAR`;
 
-    nock("https://example.com")
-      .get("/env-calendar.ics")
-      .reply(200, mockCalendarData, {
-        "Content-Type": "text/calendar",
-      });
+    axiosMock.onGet("https://example.com/env-calendar.ics").reply(200, mockCalendarData);
 
     // Simulate the index.ts flow
-    // 1. Create CalendarManager instance
-    const calendarManager = new CalendarManager();
-
+    // 1. Use isolated CalendarManager instance
+    
     // 2. Pass it to setupServer
     const server = setupServer(calendarManager);
 

@@ -678,21 +678,24 @@ export class CalendarManager {
           // Map weekday numbers to RRule constants
           let byweekday = undefined;
           if (rruleOptions.byweekday) {
-            byweekday = rruleOptions.byweekday.map(
-              (day: number | { weekday: number }) => {
+            const weekdayMap = [
+              RRule.MO,
+              RRule.TU,
+              RRule.WE,
+              RRule.TH,
+              RRule.FR,
+              RRule.SA,
+              RRule.SU,
+            ];
+            byweekday = (Array.isArray(rruleOptions.byweekday)
+              ? rruleOptions.byweekday
+              : [rruleOptions.byweekday]
+            )
+              .map((day: number | { weekday: number }) => {
                 const dayNum = typeof day === "number" ? day : day.weekday;
-                // RRule uses different constants: MO=0, TU=1, etc.
-                return [
-                  RRule.MO,
-                  RRule.TU,
-                  RRule.WE,
-                  RRule.TH,
-                  RRule.FR,
-                  RRule.SA,
-                  RRule.SU,
-                ][dayNum];
-              },
-            );
+                return dayNum >= 0 && dayNum <= 6 ? weekdayMap[dayNum] : undefined;
+              })
+              .filter(Boolean);
           }
 
           // Create RRule with proper dtstart

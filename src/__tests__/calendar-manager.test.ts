@@ -3,25 +3,14 @@ import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
 import { promises as fs } from "fs";
 import path from "path";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 describe("CalendarManager", () => {
   let calendarManager: CalendarManager;
   let axiosMock: MockAdapter;
   let mockIcsContent: string;
-  const testConfigPath = path.join(
-    process.env.HOME || "",
-    ".ical-mcp-config.json",
-  );
-  const originalConfigPath = testConfigPath + ".backup";
 
   beforeAll(async () => {
-    // Backup existing config if it exists
-    try {
-      await fs.rename(testConfigPath, originalConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-
     // Read mock calendar data
     mockIcsContent = await fs.readFile(
       path.join(__dirname, "fixtures", "mock-calendar.ics"),
@@ -30,38 +19,20 @@ describe("CalendarManager", () => {
   });
 
   beforeEach(async () => {
-    // Clean up test config before each test
-    try {
-      await fs.unlink(testConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
+    // Create isolated test environment
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
 
     // Setup axios mock
     axiosMock = new MockAdapter(axios);
-
-    // Create new calendar manager instance
-    calendarManager = new CalendarManager();
   });
 
   afterEach(async () => {
+    // Restore axios
     axiosMock.restore();
 
-    // Clean up test config
-    try {
-      await fs.unlink(testConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
-  afterAll(async () => {
-    // Restore original config if it existed
-    try {
-      await fs.rename(originalConfigPath, testConfigPath);
-    } catch (_error) {
-      // No backup to restore, that's fine
-    }
+    // Clean up isolated test environment
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   describe("subscribe_calendar", () => {

@@ -1,17 +1,11 @@
 import { CalendarManager } from "../calendar-manager";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { promises as fs } from "fs";
-import path from "path";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 describe("Timezone Handling Tests", () => {
   let calendarManager: CalendarManager;
   let axiosMock: MockAdapter;
-  const testConfigPath = path.join(
-    process.env.HOME || "",
-    ".ical-mcp-config.json",
-  );
-  const originalConfigPath = testConfigPath + ".backup";
 
   // Calendar with events in different timezones
   const multiTimezoneCalendar = `BEGIN:VCALENDAR
@@ -84,35 +78,15 @@ DESCRIPTION:Event late in NY time (crosses midnight UTC)
 END:VEVENT
 END:VCALENDAR`;
 
-  beforeAll(async () => {
-    try {
-      await fs.rename(testConfigPath, originalConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
   beforeEach(() => {
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
     axiosMock = new MockAdapter(axios);
-    calendarManager = new CalendarManager();
   });
 
   afterEach(async () => {
     axiosMock.restore();
-
-    try {
-      await fs.unlink(testConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
-  afterAll(async () => {
-    try {
-      await fs.rename(originalConfigPath, testConfigPath);
-    } catch (_error) {
-      // No backup to restore, that's fine
-    }
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   describe("Single Day with Multiple Timezones", () => {

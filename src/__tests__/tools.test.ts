@@ -1,8 +1,7 @@
 import { setupServer } from "../server-setup";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { promises as fs } from "fs";
-import path from "path";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 // Mock calendar response data
 const mockCalendarData = `BEGIN:VCALENDAR
@@ -37,45 +36,26 @@ END:VCALENDAR`;
 describe("MCP Server Tools", () => {
   let server: any;
   let axiosMock: MockAdapter;
-  const testConfigPath = path.join(
-    process.env.HOME || "",
-    ".ical-mcp-config.json",
-  );
-  const originalConfigPath = testConfigPath + ".backup";
-
-  beforeAll(async () => {
-    // Backup existing config if it exists
-    try {
-      await fs.rename(testConfigPath, originalConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-  });
+  let calendarManager: any;
 
   beforeEach(() => {
+    // Create isolated test environment
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
+    
     // Setup axios mock
     axiosMock = new MockAdapter(axios);
-    server = setupServer();
+    
+    // Create server with isolated calendar manager
+    server = setupServer(calendarManager);
   });
 
   afterEach(async () => {
+    // Restore axios
     axiosMock.restore();
-
-    // Clean up test config
-    try {
-      await fs.unlink(testConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
-  afterAll(async () => {
-    // Restore original config if it existed
-    try {
-      await fs.rename(originalConfigPath, testConfigPath);
-    } catch (_error) {
-      // No backup to restore, that's fine
-    }
+    
+    // Clean up isolated test environment
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   describe("Tool: subscribe_calendar", () => {

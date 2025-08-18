@@ -1,17 +1,12 @@
 import { setupServer } from "../server-setup";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { promises as fs } from "fs";
-import path from "path";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 describe("Date Range Regression Tests", () => {
   let server: any;
   let axiosMock: MockAdapter;
-  const testConfigPath = path.join(
-    process.env.HOME || "",
-    ".ical-mcp-config.json",
-  );
-  const originalConfigPath = testConfigPath + ".backup";
+  let calendarManager: any;
 
   // Create test calendar data with events at different times of day
   const testCalendarData = `BEGIN:VCALENDAR
@@ -65,35 +60,16 @@ DESCRIPTION:Event with specific timezone
 END:VEVENT
 END:VCALENDAR`;
 
-  beforeAll(async () => {
-    try {
-      await fs.rename(testConfigPath, originalConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
   beforeEach(() => {
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
     axiosMock = new MockAdapter(axios);
-    server = setupServer();
+    server = setupServer(calendarManager);
   });
 
   afterEach(async () => {
     axiosMock.restore();
-
-    try {
-      await fs.unlink(testConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
-  afterAll(async () => {
-    try {
-      await fs.rename(originalConfigPath, testConfigPath);
-    } catch (_error) {
-      // No backup to restore, that's fine
-    }
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   describe("Single Day Date Range", () => {

@@ -1,8 +1,9 @@
 import { CalendarManager } from "../calendar-manager";
+import { SecurityConfigManager } from "../security-config";
 import path from "path";
 import { promises as fs } from "fs";
 
-// Override config path for tests
+// Test isolation helpers
 export function createTestCalendarManager(): CalendarManager {
   // Create a test-specific config path
   const testConfigPath = path.join(
@@ -16,6 +17,9 @@ export async function cleanupTestConfig(calendarManager?: CalendarManager) {
   if (calendarManager) {
     // Clear in-memory subscriptions
     (calendarManager as any).subscriptions.clear();
+    
+    // Clear cache
+    (calendarManager as any).cache.flushAll();
 
     const configPath = (calendarManager as any).configPath;
     try {
@@ -39,4 +43,29 @@ export async function cleanupTestConfig(calendarManager?: CalendarManager) {
   } catch (_error) {
     // Directory read failed, ignore
   }
+}
+
+// Reset singleton state for test isolation
+export function resetSingletonState() {
+  // Reset SecurityConfigManager singleton
+  (SecurityConfigManager as any).instance = undefined;
+  
+  // Note: TimezoneManager singleton doesn't need resetting as it's stateless
+}
+
+// Helper to create isolated test environment
+export function createIsolatedTestEnvironment() {
+  // Reset singleton state before creating new instances
+  resetSingletonState();
+  
+  // Create isolated calendar manager
+  const calendarManager = createTestCalendarManager();
+  
+  return { calendarManager };
+}
+
+// Helper to cleanup isolated test environment
+export async function cleanupIsolatedTestEnvironment(calendarManager: CalendarManager) {
+  await cleanupTestConfig(calendarManager);
+  resetSingletonState();
 }

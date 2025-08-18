@@ -3,25 +3,14 @@ import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
 import { promises as fs } from "fs";
 import path from "path";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 describe("CalendarManager - Edge Cases", () => {
   let calendarManager: CalendarManager;
   let axiosMock: MockAdapter;
   let comprehensiveIcsContent: string;
-  const testConfigPath = path.join(
-    process.env.HOME || "",
-    ".ical-mcp-config.json",
-  );
-  const originalConfigPath = testConfigPath + ".backup";
 
   beforeAll(async () => {
-    // Backup existing config if it exists
-    try {
-      await fs.rename(testConfigPath, originalConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-
     // Read comprehensive calendar data
     comprehensiveIcsContent = await fs.readFile(
       path.join(__dirname, "fixtures", "comprehensive-calendar.ics"),
@@ -30,26 +19,14 @@ describe("CalendarManager - Edge Cases", () => {
   });
 
   beforeEach(() => {
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
     axiosMock = new MockAdapter(axios);
-    calendarManager = new CalendarManager();
   });
 
   afterEach(async () => {
     axiosMock.restore();
-
-    try {
-      await fs.unlink(testConfigPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-  });
-
-  afterAll(async () => {
-    try {
-      await fs.rename(originalConfigPath, testConfigPath);
-    } catch (_error) {
-      // No backup to restore, that's fine
-    }
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   describe("Recurring Events", () => {

@@ -1,38 +1,32 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CalendarManager } from "../calendar-manager";
 import { setupServer } from "../server-setup";
-import nock from "nock";
-import fs from "fs/promises";
-import path from "path";
+import MockAdapter from "axios-mock-adapter";
+import axios from "axios";
+import { promises as fs } from "fs";
+import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
 
 describe("Auto-subscription functionality", () => {
   let calendarManager: CalendarManager;
   let server: Server;
-  let configPath: string;
+  let axiosMock: MockAdapter;
 
   beforeEach(async () => {
-    // Clean up any existing config
-    const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    configPath = path.join(homeDir, ".ical-mcp-config.json");
-    try {
-      await fs.unlink(configPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-
-    // Create a shared CalendarManager instance (mimicking index.ts)
-    calendarManager = new CalendarManager();
+    // Create isolated test environment
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
     server = setupServer(calendarManager);
+
+    // Setup axios mock
+    axiosMock = new MockAdapter(axios);
   });
 
   afterEach(async () => {
-    // Clean up config after each test
-    try {
-      await fs.unlink(configPath);
-    } catch (_error) {
-      // File doesn't exist, that's fine
-    }
-    nock.cleanAll();
+    // Restore axios
+    axiosMock.restore();
+
+    // Clean up isolated test environment
+    await cleanupIsolatedTestEnvironment(calendarManager);
   });
 
   it("should use the same CalendarManager instance for auto-subscription and server tools", async () => {
@@ -48,11 +42,7 @@ DTEND:20250115T110000Z
 END:VEVENT
 END:VCALENDAR`;
 
-    nock("https://example.com")
-      .get("/calendar.ics")
-      .reply(200, mockCalendarData, {
-        "Content-Type": "text/calendar",
-      });
+    axiosMock.onGet("https://example.com/calendar.ics").reply(200, mockCalendarData);
 
     // Simulate auto-subscription (as done in index.ts)
     await calendarManager.subscribeCalendar(
@@ -98,12 +88,7 @@ DTEND:20250115T150000Z
 END:VEVENT
 END:VCALENDAR`;
 
-    nock("https://example.com")
-      .get("/auto-calendar.ics")
-      .reply(200, mockCalendarData, {
-        "Content-Type": "text/calendar",
-      })
-      .persist(); // Allow multiple requests
+    axiosMock.onGet("https://example.com/auto-calendar.ics").reply(200, mockCalendarData);
 
     // Simulate auto-subscription
     await calendarManager.subscribeCalendar(
@@ -146,12 +131,7 @@ DTEND:20250116T110000Z
 END:VEVENT
 END:VCALENDAR`;
 
-    nock("https://example.com")
-      .get("/persist.ics")
-      .reply(200, mockCalendarData, {
-        "Content-Type": "text/calendar",
-      })
-      .persist();
+    axiosMock.onGet("https://example.com/persist.ics").reply(200, mockCalendarData);
 
     // Simulate auto-subscription
     await calendarManager.subscribeCalendar(
@@ -161,6 +141,7 @@ END:VCALENDAR`;
     );
 
     // Verify it's saved to disk
+    const configPath = (calendarManager as any).configPath;
     const configData = await fs.readFile(configPath, "utf-8");
     const config = JSON.parse(configData);
     expect(config["Persistent Calendar"]).toBeDefined();
@@ -168,8 +149,8 @@ END:VCALENDAR`;
       "https://example.com/persist.ics",
     );
 
-    // Create a new CalendarManager and server (simulating restart)
-    const newCalendarManager = new CalendarManager();
+    // Create a new CalendarManager and server using the same config (simulating restart)
+    const newCalendarManager = new CalendarManager(configPath);
     const newServer = setupServer(newCalendarManager);
 
     // The new instance should have loaded the persisted calendar
