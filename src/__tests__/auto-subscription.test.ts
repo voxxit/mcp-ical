@@ -1,3 +1,4 @@
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CalendarManager } from "../calendar-manager";
 import { setupServer } from "../server-setup";
 import nock from "nock";
@@ -6,7 +7,7 @@ import path from "path";
 
 describe("Auto-subscription functionality", () => {
   let calendarManager: CalendarManager;
-  let server: any;
+  let server: Server;
   let configPath: string;
 
   beforeEach(async () => {
