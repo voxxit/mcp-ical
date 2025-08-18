@@ -1,5 +1,6 @@
 import { CalendarManager } from "../calendar-manager";
 import { SecurityConfigManager } from "../security-config";
+import { TimezoneManager } from "../timezone-manager";
 import path from "path";
 import { promises as fs } from "fs";
 
@@ -50,7 +51,8 @@ export function resetSingletonState() {
   // Reset SecurityConfigManager singleton
   (SecurityConfigManager as any).instance = undefined;
 
-  // Note: TimezoneManager singleton doesn't need resetting as it's stateless
+  // Reset TimezoneManager singleton to clear cached timezone
+  (TimezoneManager as any).instance = undefined;
 }
 
 // Helper to create isolated test environment

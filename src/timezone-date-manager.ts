@@ -9,10 +9,11 @@ export class TimezoneDateManager {
   private userTimezone: string;
 
   constructor(timezone?: string) {
-    // Priority: explicit override → environment variable → system detection → UTC fallback
+    // Priority: explicit argument → USER_TIMEZONE → TZ → system detection → UTC fallback
     this.userTimezone =
       timezone ||
       process.env.USER_TIMEZONE ||
+      process.env.TZ ||
       Temporal.Now.timeZoneId() ||
       "UTC";
   }
