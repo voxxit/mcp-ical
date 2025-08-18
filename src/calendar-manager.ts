@@ -46,7 +46,15 @@ interface LegacyCalendarEvent {
   recurrence?: any;
 }
 
-// Utility functions for backward compatibility
+/**
+ * Convert a Temporal-based CalendarEvent to a legacy Date-based CalendarEvent.
+ *
+ * Returns a shallow copy of `event` with `start` and `end` converted from
+ * Temporal.ZonedDateTime to JavaScript Date objects (using epoch milliseconds).
+ *
+ * @param event - The Temporal-based CalendarEvent to convert.
+ * @returns A LegacyCalendarEvent where `start` and `end` are Date instances; all other fields are copied as-is.
+ */
 function temporalEventToLegacy(event: CalendarEvent): LegacyCalendarEvent {
   return {
     ...event,

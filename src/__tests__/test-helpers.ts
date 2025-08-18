@@ -14,6 +14,17 @@ export function createTestCalendarManager(): CalendarManager {
   return new CalendarManager(testConfigPath);
 }
 
+/**
+ * Remove in-memory state and on-disk test configuration created for a CalendarManager.
+ *
+ * If `calendarManager` is provided, its in-memory subscriptions and cache are cleared and its
+ * associated config file (retrieved from `calendarManager.configPath`) is removed; missing files
+ * are ignored. Independently, the current working directory is scanned for files whose names
+ * start with ".test-ical-config-" and those files are deleted; individual deletion or directory
+ * read errors are ignored to make cleanup best-effort for test isolation.
+ *
+ * @param calendarManager - Optional CalendarManager whose in-memory state and config file should be cleaned up.
+ */
 export async function cleanupTestConfig(calendarManager?: CalendarManager) {
   if (calendarManager) {
     // Clear in-memory subscriptions
@@ -46,7 +57,12 @@ export async function cleanupTestConfig(calendarManager?: CalendarManager) {
   }
 }
 
-// Reset singleton state for test isolation
+/**
+ * Reset singleton instances used by managers to ensure a clean state for tests.
+ *
+ * Clears the cached singleton instance on SecurityConfigManager and TimezoneManager so subsequent
+ * code will create fresh instances. Intended for test isolation between test cases.
+ */
 export function resetSingletonState() {
   // Reset SecurityConfigManager singleton
   (SecurityConfigManager as any).instance = undefined;
@@ -55,7 +71,15 @@ export function resetSingletonState() {
   (TimezoneManager as any).instance = undefined;
 }
 
-// Helper to create isolated test environment
+/**
+ * Prepare an isolated test environment for CalendarManager-based tests.
+ *
+ * Resets global singleton state and creates a test-specific CalendarManager
+ * backed by an ephemeral config path.
+ *
+ * @returns An object with `calendarManager` — a fresh CalendarManager instance
+ * used for the isolated test environment.
+ */
 export function createIsolatedTestEnvironment() {
   // Reset singleton state before creating new instances
   resetSingletonState();
@@ -66,7 +90,12 @@ export function createIsolatedTestEnvironment() {
   return { calendarManager };
 }
 
-// Helper to cleanup isolated test environment
+/**
+ * Clean up a test CalendarManager's config/state and reset singleton managers.
+ *
+ * @param calendarManager - The test CalendarManager whose in-memory state and on-disk config should be removed.
+ * @returns A promise that resolves when cleanup and singleton reset are complete.
+ */
 export async function cleanupIsolatedTestEnvironment(
   calendarManager: CalendarManager,
 ) {
