@@ -77,8 +77,11 @@ export class TimezoneDateManager {
     }
 
     // Handle node-ical date objects with timezone info
-    if (typeof event.start === "object" && "dateTime" in (event.start as any)) {
-      const dateTimeObj = event.start as any;
+    if (
+      typeof event.start === "object" &&
+      "dateTime" in (event.start as { dateTime?: unknown })
+    ) {
+      const dateTimeObj = event.start as { dateTime?: Date };
       if (dateTimeObj.dateTime instanceof Date) {
         const instant = Temporal.Instant.fromEpochMilliseconds(
           dateTimeObj.dateTime.getTime(),
@@ -125,8 +128,11 @@ export class TimezoneDateManager {
         return instant.toZonedDateTimeISO(this.userTimezone);
       }
 
-      if (typeof event.end === "object" && "dateTime" in (event.end as any)) {
-        const dateTimeObj = event.end as any;
+      if (
+        typeof event.end === "object" &&
+        "dateTime" in (event.end as { dateTime?: unknown })
+      ) {
+        const dateTimeObj = event.end as { dateTime?: Date };
         if (dateTimeObj.dateTime instanceof Date) {
           const instant = Temporal.Instant.fromEpochMilliseconds(
             dateTimeObj.dateTime.getTime(),

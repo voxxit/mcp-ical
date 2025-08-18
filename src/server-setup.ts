@@ -187,13 +187,19 @@ export function setupServer(calendarManager?: CalendarManager): Server {
     ],
   });
 
-  const callToolHandler = async (request: any) => {
-    const { name, arguments: args } = request.params;
+  const callToolHandler = async (request: {
+    params: { name: string; arguments?: Record<string, unknown> };
+  }) => {
+    const { name, arguments: args = {} } = request.params;
 
     try {
       switch (name) {
         case "subscribe_calendar": {
-          const { url, name: calendarName, refreshInterval = 60 } = args as any;
+          const {
+            url,
+            name: calendarName,
+            refreshInterval = 60,
+          } = args as { url: string; name: string; refreshInterval?: number };
           await calendarManager.subscribeCalendar(
             url,
             calendarName,
@@ -227,7 +233,7 @@ export function setupServer(calendarManager?: CalendarManager): Server {
         }
 
         case "unsubscribe_calendar": {
-          const { name: calendarName } = args as any;
+          const { name: calendarName } = args as { name: string };
           calendarManager.unsubscribeCalendar(calendarName);
           return {
             content: [
@@ -240,7 +246,17 @@ export function setupServer(calendarManager?: CalendarManager): Server {
         }
 
         case "get_events": {
-          const { calendarName, startDate, endDate, limit = 50 } = args as any;
+          const {
+            calendarName,
+            startDate,
+            endDate,
+            limit = 50,
+          } = args as {
+            calendarName?: string;
+            startDate: string;
+            endDate: string;
+            limit?: number;
+          };
 
           // Use TimezoneDateManager for proper timezone-aware date parsing
           const { TimezoneDateManager } = await import(
@@ -276,7 +292,12 @@ export function setupServer(calendarManager?: CalendarManager): Server {
         }
 
         case "search_events": {
-          const { query, calendarName, startDate, endDate } = args as any;
+          const { query, calendarName, startDate, endDate } = args as {
+            query: string;
+            calendarName?: string;
+            startDate?: string;
+            endDate?: string;
+          };
 
           // Use TimezoneDateManager for proper timezone-aware date parsing
           const { TimezoneDateManager } = await import(
@@ -315,7 +336,11 @@ export function setupServer(calendarManager?: CalendarManager): Server {
         }
 
         case "get_upcoming_events": {
-          const { calendarName, days = 7, limit = 20 } = args as any;
+          const {
+            calendarName,
+            days = 7,
+            limit = 20,
+          } = args as { calendarName?: string; days?: number; limit?: number };
 
           // Use TimezoneDateManager for proper timezone-aware date calculations
           const { TimezoneDateManager } = await import(
@@ -350,7 +375,12 @@ export function setupServer(calendarManager?: CalendarManager): Server {
             calendarName,
             startHour = 9,
             endHour = 17,
-          } = args as any;
+          } = args as {
+            date?: string;
+            calendarName?: string;
+            startHour?: number;
+            endHour?: number;
+          };
 
           // Import the new timezone date manager
           const { TimezoneDateManager } = await import(
@@ -445,7 +475,9 @@ export function setupServer(calendarManager?: CalendarManager): Server {
   server.setRequestHandler(CallToolRequestSchema, callToolHandler);
 
   // Add method to get request handlers for testing
-  (server as any).getRequestHandlers = () => {
+  (
+    server as Server & { getRequestHandlers?: () => Map<string, unknown> }
+  ).getRequestHandlers = () => {
     const handlers = new Map();
     handlers.set("tools/list", listToolsHandler);
     handlers.set("tools/call", callToolHandler);

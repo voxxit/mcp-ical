@@ -28,7 +28,7 @@ interface CalendarEvent {
   attendees?: string[];
   calendarName: string;
   isAllDay: boolean;
-  recurrence?: any;
+  recurrence?: RRule | string | object;
 }
 
 // Backward compatibility: Legacy CalendarEvent with Date objects
@@ -43,7 +43,7 @@ interface LegacyCalendarEvent {
   attendees?: string[];
   calendarName: string;
   isAllDay: boolean;
-  recurrence?: any;
+  recurrence?: RRule | string | object;
 }
 
 // Utility functions for backward compatibility
@@ -249,7 +249,7 @@ export class CalendarManager {
   /**
    * Sanitizes error messages to prevent information disclosure
    */
-  private sanitizeErrorMessage(error: any, context: string): string {
+  private sanitizeErrorMessage(error: unknown, context: string): string {
     // Never expose stack traces or detailed internal errors in production
     if (process.env.NODE_ENV === "production") {
       // Return generic error messages for production
@@ -266,8 +266,8 @@ export class CalendarManager {
     }
 
     // In development, provide more details but still sanitize sensitive info
-    if (error && error.message) {
-      let message = error.message;
+    if (error && typeof error === "object" && "message" in error) {
+      let message = (error as Error).message;
 
       // Remove potential sensitive information
       message = message.replace(/https?:\/\/[^\s]+/gi, "[URL]");
@@ -746,11 +746,11 @@ export class CalendarManager {
             // Each value is a Date-like object with timezone info
             if (value && typeof value === "object") {
               // Get the time value - value behaves like a Date
-              const dateObj = value as any;
+              const dateObj = value as Date | { getTime?: () => number };
               const instant = Temporal.Instant.fromEpochMilliseconds(
                 dateObj.getTime
                   ? dateObj.getTime()
-                  : new Date(dateObj).getTime(),
+                  : new Date(dateObj as Date).getTime(),
               );
               const zdt = instant.toZonedDateTimeISO(
                 this.timezoneDateManager.getTimezone(),
@@ -768,7 +768,25 @@ export class CalendarManager {
         rrule = rrulestr(vevent.rrule);
       } else if (vevent.rrule && typeof vevent.rrule === "object") {
         // Convert node-ical rrule object to RRule options
-        const rruleObj = vevent.rrule as any;
+        const rruleObj = vevent.rrule as {
+          origOptions?: RRuleOptions;
+          options?: RRuleOptions;
+        };
+        interface RRuleOptions {
+          freq?: number;
+          interval?: number;
+          until?: Date | string;
+          count?: number;
+          wkst?: number;
+          bymonth?: number[];
+          bymonthday?: number[];
+          byyearday?: number[];
+          byweekno?: number[];
+          byweekday?: number | number[] | { weekday: number }[];
+          byhour?: number[];
+          byminute?: number[];
+          bysecond?: number[];
+        }
         const rruleOptions = rruleObj.origOptions || rruleObj.options;
         if (rruleOptions) {
           // Map weekday numbers to RRule constants
@@ -794,7 +812,7 @@ export class CalendarManager {
                   ? weekdayMap[dayNum]
                   : undefined;
               })
-              .filter(Boolean);
+              .filter((d): d is (typeof weekdayMap)[number] => d !== undefined);
           }
 
           // Create RRule with proper dtstart - RRule expects Date objects

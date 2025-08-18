@@ -71,6 +71,15 @@ export default [
         Temporal: "readonly",
       },
     },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    files: ["src/__tests__/**/*.ts", "src/__tests__/**/*.js"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
   },
   {
     files: ["**/*.js"],
