@@ -18,7 +18,7 @@ This release addresses multiple critical security vulnerabilities identified in 
 
 ##### 1. Command Injection Vulnerability
 
-- **Location**: `src/timezone-manager.ts:45-102`
+- **Location**: `src/timezone-date-manager.ts` (timezone detection and resolution)
 - **Risk Level**: HIGH
 - **Issue**: Arbitrary command execution through `execSync()` calls
 - **Fix**:
@@ -26,6 +26,7 @@ This release addresses multiple critical security vulnerabilities identified in 
   - Replaced `execSync('readlink /etc/localtime')` with `fs.readlinkSync('/etc/localtime')`
   - Removed all shell command execution for timezone detection
   - Now uses Node.js native APIs exclusively for system information
+  - The new Temporal-based `TimezoneDateManager` does not use shell commands, further hardening the security posture
 
 ##### 2. Server-Side Request Forgery (SSRF) Protection
 
