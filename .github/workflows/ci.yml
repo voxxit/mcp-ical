@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -30,10 +34,10 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Run linting
-        run: npx eslint src/**/*.ts
+        run: npx eslint .
 
       - name: Run tests with coverage
-        run: npx jest --coverage --ci --bail
+        run: npx jest --coverage --ci --bail --runInBand
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
