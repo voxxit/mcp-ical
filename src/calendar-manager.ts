@@ -36,7 +36,7 @@ export class CalendarManager {
   private timezoneManager: TimezoneManager;
   private securityConfig: SecurityConfigManager;
 
-  constructor() {
+  constructor(configPath?: string) {
     // Initialize security configuration first
     this.securityConfig = SecurityConfigManager.getInstance();
     const config = this.securityConfig.getConfig();
@@ -52,8 +52,12 @@ export class CalendarManager {
     this.timezoneManager = TimezoneManager.getInstance();
 
     // Set up config path
-    const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    this.configPath = path.join(homeDir, ".ical-mcp-config.json");
+    if (configPath) {
+      this.configPath = configPath;
+    } else {
+      const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+      this.configPath = path.join(homeDir, ".ical-mcp-config.json");
+    }
 
     // Load saved subscriptions synchronously
     this.loadSubscriptionsSync();

@@ -1,14 +1,24 @@
 import { CalendarManager } from "../calendar-manager";
 import { SecurityConfigManager } from "../security-config";
 import { TimezoneManager } from "../timezone-manager";
+import MockAdapter from "axios-mock-adapter";
+import axios from "axios";
+import { createTestCalendarManager, cleanupTestConfig } from "./test-helpers";
 
 describe("Security Tests", () => {
   let calendarManager: CalendarManager;
   let securityConfig: SecurityConfigManager;
+  let axiosMock: MockAdapter;
 
   beforeEach(() => {
-    calendarManager = new CalendarManager();
+    axiosMock = new MockAdapter(axios);
+    calendarManager = createTestCalendarManager();
     securityConfig = SecurityConfigManager.getInstance();
+  });
+
+  afterEach(async () => {
+    axiosMock.restore();
+    await cleanupTestConfig(calendarManager);
   });
 
   describe("Command Injection Prevention", () => {
@@ -59,15 +69,17 @@ describe("Security Tests", () => {
       ).rejects.toThrow("Invalid protocol: only http:, https: allowed");
     });
 
-    test("should accept valid HTTPS URLs", () => {
-      // This test just validates URL format, doesn't actually fetch
-      expect(() => {
-        // This will fail at the fetch stage, but URL validation should pass
+    test("should accept valid HTTPS URLs", async () => {
+      // Mock a 404 response to test that URL validation passes but network fails
+      axiosMock.onGet("https://example.com/calendar.ics").reply(404);
+
+      // This should fail with a fetch error, not a protocol validation error
+      await expect(
         calendarManager.subscribeCalendar(
           "https://example.com/calendar.ics",
           "test-valid",
-        );
-      }).not.toThrow("Invalid protocol");
+        ),
+      ).rejects.toThrow("fetch");
     });
   });
 
@@ -129,27 +141,26 @@ describe("Security Tests", () => {
     test("should enforce subscription limits", async () => {
       const config = securityConfig.getConfig();
 
-      // Try to add more than the maximum allowed subscriptions
-      // This would fail at the network fetch stage, but we can test the limit
-      const promises = [];
-      for (let i = 0; i < config.maxCalendarSubscriptions + 1; i++) {
-        promises.push(
-          calendarManager
-            .subscribeCalendar(`https://example${i}.com/cal.ics`, `test${i}`)
-            .catch((err) => err.message),
+      // Mock successful calendar responses
+      const mockCalendarData = `BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR`;
+      axiosMock.onGet().reply(200, mockCalendarData);
+
+      // Add subscriptions up to the limit
+      for (let i = 0; i < config.maxCalendarSubscriptions; i++) {
+        await calendarManager.subscribeCalendar(
+          `https://example${i}.com/cal.ics`,
+          `test${i}`,
         );
       }
 
-      const results = await Promise.all(promises);
-      const limitErrors = results.filter(
-        (result) =>
-          typeof result === "string" &&
-          result.includes("Maximum number of calendar subscriptions"),
-      );
-
-      // At least one should fail due to subscription limit
-      expect(limitErrors.length).toBeGreaterThan(0);
-    });
+      // This subscription should fail due to limit
+      await expect(
+        calendarManager.subscribeCalendar(
+          `https://example-overflow.com/cal.ics`,
+          "overflow-test",
+        ),
+      ).rejects.toThrow("Maximum number of calendar subscriptions");
+    }, 10000); // Add 10 second timeout
   });
 
   describe("Security Configuration", () => {
