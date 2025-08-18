@@ -4,6 +4,6 @@
  */
 export default {
   "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"],
-  "src/**/*.{ts,tsx}": () => "tsc --noEmit",
+  "src/**/*.{ts,tsx}": () => ["tsc --noEmit", "npm test"],
   "!(.husky/**|*.js|*.jsx|*.ts|*.tsx)": ["prettier --write"],
 };

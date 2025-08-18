@@ -48,6 +48,7 @@ npm run build
 ### Publishing Steps
 
 1. Update the version in `package.json` following semantic versioning:
+
    ```bash
    npm version patch  # for bug fixes
    npm version minor  # for new features
@@ -55,11 +56,13 @@ npm run build
    ```
 
 2. Build the project:
+
    ```bash
    npm run build
    ```
 
 3. Publish to npm:
+
    ```bash
    npm publish --access public
    ```
@@ -93,6 +96,7 @@ This will display detailed instructions for adding the server to Claude Desktop.
 ### Running the Server
 
 The server should be run through Claude Desktop. When started, it displays:
+
 - Configuration instructions
 - Available tools
 - Auto-subscription status (if CALENDAR_URL is set)
@@ -150,6 +154,7 @@ You can automatically subscribe to a calendar on startup using environment varia
 - `TZ` - Timezone for date/time operations (e.g., "America/New_York", "Europe/London"). If not set, the server will attempt to detect your system timezone.
 
 Example:
+
 ```bash
 CALENDAR_URL="https://example.com/calendar.ics" npm start
 ```
@@ -199,26 +204,27 @@ Add this to your `claude_desktop_config.json`:
 await subscribe_calendar({
   url: "https://example.com/calendar.ics",
   name: "Work Calendar",
-  refreshInterval: 30
+  refreshInterval: 30,
 });
 
 // Get upcoming events for the next 7 days
 await get_upcoming_events({
   days: 7,
-  limit: 10
+  limit: 10,
 });
 
 // Search for events containing "meeting"
 await search_events({
   query: "meeting",
   startDate: "2025-01-01",
-  endDate: "2025-12-31"
+  endDate: "2025-12-31",
 });
 ```
 
 ## Caching
 
 The server implements intelligent caching:
+
 - Each calendar is cached according to its refresh interval
 - Cache is automatically refreshed when expired
 - Manual refresh occurs on each subscription update

@@ -1,7 +1,11 @@
+import "temporal-polyfill/global";
 import { setupServer } from "../server-setup";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
+import {
+  createIsolatedTestEnvironment,
+  cleanupIsolatedTestEnvironment,
+} from "./test-helpers";
 
 // Mock calendar response data
 const mockCalendarData = `BEGIN:VCALENDAR
@@ -42,10 +46,10 @@ describe("MCP Server Tools", () => {
     // Create isolated test environment
     const testEnv = createIsolatedTestEnvironment();
     calendarManager = testEnv.calendarManager;
-    
+
     // Setup axios mock
     axiosMock = new MockAdapter(axios);
-    
+
     // Create server with isolated calendar manager
     server = setupServer(calendarManager);
   });
@@ -53,7 +57,7 @@ describe("MCP Server Tools", () => {
   afterEach(async () => {
     // Restore axios
     axiosMock.restore();
-    
+
     // Clean up isolated test environment
     await cleanupIsolatedTestEnvironment(calendarManager);
   });
@@ -326,10 +330,22 @@ describe("MCP Server Tools", () => {
       const events = JSON.parse(response.content[0].text);
       expect(
         events.every((e: any) => {
-          const eventDate = new Date(e.start);
+          const eventStart = Temporal.ZonedDateTime.from(e.start);
+          const rangeStart = Temporal.PlainDate.from(
+            "2025-08-15",
+          ).toZonedDateTime({
+            plainTime: "00:00:00",
+            timeZone: eventStart.timeZoneId,
+          });
+          const rangeEnd = Temporal.PlainDate.from(
+            "2025-08-16",
+          ).toZonedDateTime({
+            plainTime: "23:59:59",
+            timeZone: eventStart.timeZoneId,
+          });
           return (
-            eventDate >= new Date("2025-08-15") &&
-            eventDate <= new Date("2025-08-16")
+            Temporal.ZonedDateTime.compare(eventStart, rangeStart) >= 0 &&
+            Temporal.ZonedDateTime.compare(eventStart, rangeEnd) <= 0
           );
         }),
       ).toBe(true);

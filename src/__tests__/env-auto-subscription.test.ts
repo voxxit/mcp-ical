@@ -2,7 +2,10 @@ import { CalendarManager } from "../calendar-manager";
 import { setupServer } from "../server-setup";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
+import {
+  createIsolatedTestEnvironment,
+  cleanupIsolatedTestEnvironment,
+} from "./test-helpers";
 
 describe("Environment Variable Auto-subscription", () => {
   let calendarManager: CalendarManager;
@@ -38,11 +41,13 @@ DTEND:20250115T110000Z
 END:VEVENT
 END:VCALENDAR`;
 
-    axiosMock.onGet("https://example.com/env-calendar.ics").reply(200, mockCalendarData);
+    axiosMock
+      .onGet("https://example.com/env-calendar.ics")
+      .reply(200, mockCalendarData);
 
     // Simulate the index.ts flow
     // 1. Use isolated CalendarManager instance
-    
+
     // 2. Pass it to setupServer
     const server = setupServer(calendarManager);
 

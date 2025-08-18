@@ -31,6 +31,7 @@ export default [
         clearInterval: "readonly",
         URL: "readonly",
         URLSearchParams: "readonly",
+        Temporal: "readonly",
       },
     },
     plugins: {
@@ -67,7 +68,17 @@ export default [
         afterAll: "readonly",
         jest: "readonly",
         test: "readonly",
+        Temporal: "readonly",
       },
+    },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    files: ["src/__tests__/**/*.ts", "src/__tests__/**/*.js"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
   {

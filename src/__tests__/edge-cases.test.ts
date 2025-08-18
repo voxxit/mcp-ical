@@ -1,9 +1,13 @@
+import "temporal-polyfill/global";
 import { CalendarManager } from "../calendar-manager";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
 import { promises as fs } from "fs";
 import path from "path";
-import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
+import {
+  createIsolatedTestEnvironment,
+  cleanupIsolatedTestEnvironment,
+} from "./test-helpers";
 
 describe("CalendarManager - Edge Cases", () => {
   let calendarManager: CalendarManager;
@@ -45,7 +49,7 @@ describe("CalendarManager - Edge Cases", () => {
       expect(recurringEvent.summary).toBe("Weekly Team Standup");
     });
 
-    it.skip("should handle EXDATE exclusions in recurring events", async () => {
+    it("should handle EXDATE exclusions in recurring events", async () => {
       const startDate = new Date("2025-08-20");
       const endDate = new Date("2025-09-05");
       const events = await calendarManager.getEvents(
@@ -61,7 +65,7 @@ describe("CalendarManager - Edge Cases", () => {
       const excludedDates = ["2025-08-25", "2025-09-01"];
 
       standupEvents.forEach((event) => {
-        const eventDate = event.start.toISOString().split("T")[0];
+        const eventDate = event.start.toPlainDate().toString();
         expect(excludedDates).not.toContain(eventDate);
       });
     });
@@ -152,7 +156,7 @@ describe("CalendarManager - Edge Cases", () => {
 
       expect(events.length).toBeGreaterThan(0);
       const event = events[0];
-      expect(event.start).toBeInstanceOf(Date);
+      expect(event.start).toBeInstanceOf(Temporal.ZonedDateTime);
       // The date should be properly converted from Eastern time
     });
 
@@ -200,7 +204,10 @@ describe("CalendarManager - Edge Cases", () => {
       const [event1, event2] = events;
 
       // Check that both events exist and overlap in time
-      expect(event1.start < event2.end && event2.start < event1.end).toBe(true);
+      expect(
+        Temporal.ZonedDateTime.compare(event1.start, event2.end) < 0 &&
+          Temporal.ZonedDateTime.compare(event2.start, event1.end) < 0,
+      ).toBe(true);
     });
   });
 

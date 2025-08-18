@@ -1,7 +1,10 @@
 import { setupServer } from "../server-setup";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
-import { createIsolatedTestEnvironment, cleanupIsolatedTestEnvironment } from "./test-helpers";
+import {
+  createIsolatedTestEnvironment,
+  cleanupIsolatedTestEnvironment,
+} from "./test-helpers";
 
 describe("Daily Agenda Tool Tests", () => {
   let server: any;
@@ -40,8 +43,8 @@ END:VEVENT
 BEGIN:VEVENT
 UID:lunch-meeting@test.com
 SUMMARY:Lunch Meeting
-DTSTART:20250812T170000Z
-DTEND:20250812T180000Z
+DTSTART:20250812T160000Z
+DTEND:20250812T170000Z
 DESCRIPTION:Working lunch with team
 LOCATION:Cafeteria
 END:VEVENT
@@ -134,18 +137,18 @@ END:VCALENDAR`;
 
       // Should include events during work hours
       const summaries = agenda.events.map((e: any) => e.summary);
-      
+
       // These events should always be in working hours (9-5) regardless of timezone
       expect(summaries).toContain("Morning Standup"); // 14:00Z = 9:00 AM EST, 6:00 AM PST
-      expect(summaries).toContain("Client Meeting");  // 15:00Z = 10:00 AM EST, 7:00 AM PST
-      expect(summaries).toContain("Lunch Meeting");   // 17:00Z = 12:00 PM EST, 9:00 AM PST
-      
+      expect(summaries).toContain("Client Meeting"); // 15:00Z = 10:00 AM EST, 7:00 AM PST
+      expect(summaries).toContain("Lunch Meeting"); // 16:00Z = 11:00 AM EST, 8:00 AM PST
+
       // These events depend on timezone - include if within working hours in local timezone
       if (summaries.includes("Afternoon Workshop")) {
         expect(summaries).toContain("Afternoon Workshop"); // 19:00Z = varies by timezone
       }
       if (summaries.includes("End of Day Review")) {
-        expect(summaries).toContain("End of Day Review");   // 21:30Z = varies by timezone  
+        expect(summaries).toContain("End of Day Review"); // 21:30Z = varies by timezone
       }
 
       // Early Morning Gym (11:00Z) might be included depending on timezone
@@ -261,8 +264,17 @@ END:VCALENDAR`;
 
       // Check that events are sorted chronologically
       for (let i = 1; i < agenda.events.length; i++) {
-        const prevStart = new Date(agenda.events[i - 1].start).getTime();
-        const currStart = new Date(agenda.events[i].start).getTime();
+        const prevEvent = agenda.events[i - 1];
+        const currEvent = agenda.events[i];
+
+        // Parse Temporal ISO strings to get timestamps for comparison
+        const prevStart = Temporal.ZonedDateTime.from(
+          prevEvent.start,
+        ).epochMilliseconds;
+        const currStart = Temporal.ZonedDateTime.from(
+          currEvent.start,
+        ).epochMilliseconds;
+
         expect(currStart).toBeGreaterThanOrEqual(prevStart);
       }
     });
