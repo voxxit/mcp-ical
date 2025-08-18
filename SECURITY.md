@@ -16,7 +16,7 @@ This release addresses multiple critical security vulnerabilities identified in 
 
 #### 🔴 Critical Fixes
 
-##### 1. Command Injection Vulnerability (CVE-TBD)
+##### 1. Command Injection Vulnerability
 - **Location**: `src/timezone-manager.ts:45-102`
 - **Risk Level**: HIGH
 - **Issue**: Arbitrary command execution through `execSync()` calls
@@ -125,7 +125,7 @@ This release addresses multiple critical security vulnerabilities identified in 
 If you discover a security vulnerability, please follow these steps:
 
 1. **DO NOT** create a public GitHub issue
-2. Email security concerns to: [security@voxxit.net]
+2. Email security concerns to: [security@srv.im]
 3. Include a detailed description of the vulnerability
 4. Provide steps to reproduce the issue
 5. Include any proof-of-concept code
@@ -196,4 +196,4 @@ Security improvements in v1.0.3 were implemented to address findings from a comp
 
 **Last Updated**: 2025-08-18  
 **Version**: 1.0.3  
-**Security Contact**: security@voxxit.net
+**Security Contact**: security@srv.im
