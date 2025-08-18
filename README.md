@@ -1,5 +1,7 @@
 # @voxxit/mcp-ical
 
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/voxxit/mcp-ical?utm_source=oss&utm_medium=github&utm_campaign=voxxit%2Fmcp-ical&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
 An MCP (Model Context Protocol) server that subscribes to iCalendar (.ics) feeds, caches them locally, and provides tools to query calendar events.
 
 ## Features
