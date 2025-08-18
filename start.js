@@ -20,7 +20,7 @@ if (require.main === module) {
 ║  2. Add to Claude Desktop config:                                 ║
 ║     - macOS: ~/Library/Application Support/Claude/                ║
 ║               claude_desktop_config.json                           ║
-║     - Windows: %APPDATA%\\Claude\\claude_desktop_config.json       ║
+║     - Windows: %APPDATA%\\Claude\\claude_desktop_config.json         ║
 ║                                                                    ║
 ║  3. Add this configuration:                                        ║
 ║                                                                    ║
