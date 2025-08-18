@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { readFileSync, readlinkSync } from 'fs';
 
 export class TimezoneManager {
   private static instance: TimezoneManager;
@@ -29,9 +29,7 @@ export class TimezoneManager {
 
   private detectSystemTimezone(): string {
     try {
-      // Try different methods to detect timezone
-      
-      // Method 1: Use Intl API (works in Node.js)
+      // Method 1: Use Intl API (works in Node.js and is safe)
       const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (detectedTz) {
         return detectedTz;
@@ -41,8 +39,8 @@ export class TimezoneManager {
     }
 
     try {
-      // Method 2: Check /etc/timezone (Linux)
-      const timezone = execSync('cat /etc/timezone 2>/dev/null', { encoding: 'utf8' }).trim();
+      // Method 2: Check /etc/timezone (Linux) - safe file read
+      const timezone = readFileSync('/etc/timezone', 'utf8').trim();
       if (timezone) {
         return timezone;
       }
@@ -51,8 +49,8 @@ export class TimezoneManager {
     }
 
     try {
-      // Method 3: Check /etc/localtime symlink (Linux/Unix)
-      const localtime = execSync('readlink /etc/localtime 2>/dev/null', { encoding: 'utf8' }).trim();
+      // Method 3: Check /etc/localtime symlink (Linux/Unix) - safe symlink read
+      const localtime = readlinkSync('/etc/localtime');
       if (localtime) {
         // Extract timezone from path like /usr/share/zoneinfo/America/New_York
         const match = localtime.match(/zoneinfo\/(.+)$/);
@@ -64,44 +62,7 @@ export class TimezoneManager {
       // Not Unix or symlink doesn't exist
     }
 
-    try {
-      // Method 4: macOS specific
-      const timezone = execSync('defaults read /Library/Preferences/.GlobalPreferences.plist com.apple.timezone.auto.plist 2>/dev/null | grep timezone | cut -d\\" -f2', { encoding: 'utf8' }).trim();
-      if (timezone) {
-        return timezone;
-      }
-    } catch (error) {
-      // Not macOS
-    }
-
-    try {
-      // Method 5: Use date command (cross-platform fallback)
-      const dateOutput = execSync('date +%Z', { encoding: 'utf8' }).trim();
-      // This gives abbreviated timezone like PST, EST, etc.
-      // Try to map to IANA timezone
-      const tzMap: { [key: string]: string } = {
-        'PST': 'America/Los_Angeles',
-        'PDT': 'America/Los_Angeles',
-        'MST': 'America/Denver',
-        'MDT': 'America/Denver',
-        'CST': 'America/Chicago',
-        'CDT': 'America/Chicago',
-        'EST': 'America/New_York',
-        'EDT': 'America/New_York',
-        'GMT': 'Europe/London',
-        'BST': 'Europe/London',
-        'CET': 'Europe/Paris',
-        'CEST': 'Europe/Paris',
-      };
-      
-      if (tzMap[dateOutput]) {
-        return tzMap[dateOutput];
-      }
-    } catch (error) {
-      // date command failed
-    }
-
-    // Default fallback
+    // Default fallback - removed unsafe command execution methods
     console.error('Warning: Could not detect timezone, defaulting to UTC');
     return 'UTC';
   }
