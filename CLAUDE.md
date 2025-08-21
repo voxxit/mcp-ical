@@ -41,7 +41,7 @@ These hooks are already configured and will run automatically on `git commit`.
 
 ### Testing
 
-- `npm test` - Run all tests with Jest (runs in band)
+- `npm test` - Run all tests with Vitest
 - `npm run test:watch` - Run tests in watch mode
 - `npm run test:coverage` - Generate test coverage report
 - `npm run test:manual` - Build and run manual test file
@@ -49,7 +49,7 @@ These hooks are already configured and will run automatically on `git commit`.
 To run a single test file:
 
 ```bash
-npx jest src/__tests__/specific-test.test.ts
+npx vitest src/__tests__/specific-test.test.ts
 ```
 
 ### Publishing to npm
@@ -126,10 +126,10 @@ Tools are defined in `server-setup.ts` with:
 
 ### Testing Strategy
 
-- Uses Jest with ts-jest preset
+- Uses Vitest with TypeScript integration
 - Test files located in `src/__tests__/`
-- Uses `nock` for HTTP mocking in tests
-- Test helpers in `src/__tests__/test-helpers.ts`
+- Uses `axios-mock-adapter` for HTTP mocking in tests
+- Test helpers in `src/__tests__/test-helpers.ts` (includes temporal-polyfill)
 - Coverage reports in HTML and LCOV formats
 
 ## Key Implementation Notes

@@ -1,3 +1,6 @@
+// Import temporal-polyfill first to ensure Temporal API is available for all tests
+import "temporal-polyfill/global";
+
 import { CalendarManager } from "../calendar-manager";
 import { SecurityConfigManager } from "../security-config";
 import { TimezoneManager } from "../timezone-manager";

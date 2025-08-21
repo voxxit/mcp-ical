@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import "temporal-polyfill/global";
 import { setupServer } from "../server-setup";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";
