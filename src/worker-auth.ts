@@ -636,6 +636,18 @@ export default {
 
     // Dashboard (client-side auth only)
     if (url.pathname === "/dashboard") {
+      // Check for required configuration
+      if (!env.CLERK_PUBLISHABLE_KEY) {
+        console.error("Missing required configuration: CLERK_PUBLISHABLE_KEY");
+        return new Response(
+          getConfigurationErrorPage(["CLERK_PUBLISHABLE_KEY"]),
+          {
+            status: 500,
+            headers: { "Content-Type": "text/html" },
+          },
+        );
+      }
+
       // Don't do server-side auth verification for dashboard
       // Let client-side Clerk handle authentication
       return new Response(
@@ -648,6 +660,18 @@ export default {
 
     // Landing page (public)
     if (url.pathname === "/") {
+      // Check for required configuration
+      if (!env.CLERK_PUBLISHABLE_KEY) {
+        console.error("Missing required configuration: CLERK_PUBLISHABLE_KEY");
+        return new Response(
+          getConfigurationErrorPage(["CLERK_PUBLISHABLE_KEY"]),
+          {
+            status: 500,
+            headers: { "Content-Type": "text/html" },
+          },
+        );
+      }
+
       // Don't do server-side auth check to avoid redirect loops
       // Let client-side handle the redirect after Clerk loads
       return new Response(
@@ -763,6 +787,11 @@ async function handleAPI(
 
 // Landing page HTML
 function getLandingPage(origin: string, publishableKey: string): string {
+  // Fail fast if publishableKey is missing - no fallback to test keys
+  if (!publishableKey) {
+    throw new Error("CLERK_PUBLISHABLE_KEY is required but not configured");
+  }
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -1051,6 +1080,128 @@ function getLandingPage(origin: string, publishableKey: string): string {
 </html>`;
 }
 
+// Configuration Error HTML
+function getConfigurationErrorPage(missingKeys: string[]): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <title>Configuration Error - iCal MCP Server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .error-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      padding: 40px;
+      max-width: 600px;
+      text-align: center;
+    }
+    .error-icon {
+      width: 60px;
+      height: 60px;
+      background: #ef4444;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    h1 {
+      color: #1f2937;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+    .error-code {
+      color: #6b7280;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .error-message {
+      color: #4b5563;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .missing-keys {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 20px 0;
+      text-align: left;
+    }
+    .missing-keys h3 {
+      color: #991b1b;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .missing-keys ul {
+      list-style: none;
+      color: #7f1d1d;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .missing-keys li {
+      padding: 4px 0;
+    }
+    .instructions {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      text-align: left;
+      font-size: 14px;
+      color: #4b5563;
+    }
+    .instructions code {
+      background: #374151;
+      color: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-container">
+    <div class="error-icon">!</div>
+    <h1>Configuration Error</h1>
+    <div class="error-code">HTTP 500 - Internal Server Error</div>
+    <div class="error-message">
+      The server is not properly configured. Required environment variables are missing.
+    </div>
+    <div class="missing-keys">
+      <h3>Missing Configuration:</h3>
+      <ul>
+        ${missingKeys.map((key) => `<li>• ${key}</li>`).join("")}
+      </ul>
+    </div>
+    <div class="instructions">
+      <strong>For Cloudflare Workers:</strong><br>
+      Set the missing variables in your <code>wrangler.toml</code> file or via the Cloudflare dashboard.<br><br>
+      <strong>Example:</strong><br>
+      <code>wrangler secret put CLERK_PUBLISHABLE_KEY</code>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 // Dashboard HTML
 function getDashboardPage(
   origin: string,
@@ -1058,8 +1209,12 @@ function getDashboardPage(
   email?: string,
   publishableKey?: string,
 ): string {
-  const clerkKey =
-    publishableKey || "pk_test_cmlnaHQtbXVsbGV0LTUzLmNsZXJrLmFjY291bnRzLmRldiQ";
+  // Fail fast if publishableKey is missing - no fallback to test keys
+  if (!publishableKey) {
+    throw new Error("CLERK_PUBLISHABLE_KEY is required but not configured");
+  }
+
+  const clerkKey = publishableKey;
   return `<!DOCTYPE html>
 <html>
 <head>

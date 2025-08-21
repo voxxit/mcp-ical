@@ -13,9 +13,11 @@ TZ = "UTC"
 # Enable Clerk authentication
 ENABLE_AUTH = "true"
 # Clerk JWKS URL for JWT verification
-CLERK_JWKS_URL = "https://right-mullet-53.clerk.accounts.dev/.well-known/jwks.json"
-# Clerk Publishable Key (public, safe to commit)
-CLERK_PUBLISHABLE_KEY = "pk_test_cmlnaHQtbXVsbGV0LTUzLmNsZXJrLmFjY291bnRzLmRldiQ"
+# IMPORTANT: Replace with your actual Clerk JWKS URL
+# CLERK_JWKS_URL = "https://your-domain.clerk.accounts.dev/.well-known/jwks.json"
+# Clerk Publishable Key - REQUIRED for dashboard to function
+# IMPORTANT: You MUST set this to your actual Clerk publishable key
+# CLERK_PUBLISHABLE_KEY = "pk_live_your_actual_key_here"
 # Clerk Redirect URLs
 CLERK_SIGN_IN_FALLBACK_REDIRECT_URL = "/dashboard"
 CLERK_SIGN_UP_FALLBACK_REDIRECT_URL = "/dashboard"
