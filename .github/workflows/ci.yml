@@ -30,8 +30,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run type checking
+      - name: Generate Cloudflare Worker types
+        run: npx wrangler types
+
+      - name: Run type checking for MCP server
         run: npx tsc --noEmit
+
+      - name: Run type checking for Cloudflare Workers
+        run: npx tsc --project tsconfig.worker.json --noEmit
 
       - name: Run linting
         run: npx eslint .
