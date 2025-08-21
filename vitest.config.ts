@@ -6,7 +6,7 @@ export default defineConfig({
     environment: "node",
     environmentMatchGlobs: [
       ["src/worker*.test.ts", "node"],
-      ["__tests__/clerk-auth*.test.ts", "node"],
+      ["src/__tests__/clerk-auth*.test.ts", "node"],
     ],
     coverage: {
       provider: "v8",

@@ -12,7 +12,7 @@
     "moduleResolution": "node",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*", "__tests__/**/*", "vitest.config.ts"],
+  "include": ["src/**/*", "vitest.config.ts"],
   "exclude": [
     "node_modules",
     "dist",
