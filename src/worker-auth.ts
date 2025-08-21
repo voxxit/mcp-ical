@@ -4,8 +4,21 @@ import { z } from "zod";
 import { ClerkHandler } from "./clerk-auth.js";
 
 // Extend the Env interface to include secrets and config
-interface Env extends Cloudflare.Env {
-  CLERK_SECRET_KEY: string;
+interface Env {
+  // From Cloudflare (generated types)
+  CALENDAR_CACHE: KVNamespace;
+  TZ: string;
+  ENABLE_AUTH: string;
+  CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: string;
+  CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: string;
+  CLERK_SIGN_IN_FORCE_REDIRECT_URL: string;
+  CLERK_SIGN_UP_FORCE_REDIRECT_URL: string;
+  ICAL_MCP: DurableObjectNamespace;
+
+  // Clerk configuration (may be provided via secrets or env vars)
+  CLERK_SECRET_KEY?: string;
+  CLERK_PUBLISHABLE_KEY?: string;
+  CLERK_JWKS_URL?: string;
 }
 
 interface CalendarSubscription {
@@ -388,8 +401,8 @@ export default {
 
           // Generate an access token (simplified - just use MCP token format)
           const token = await new ClerkHandler({
-            CLERK_SECRET_KEY: env.CLERK_SECRET_KEY,
-            CLERK_PUBLISHABLE_KEY: env.CLERK_PUBLISHABLE_KEY,
+            CLERK_SECRET_KEY: env.CLERK_SECRET_KEY || "",
+            CLERK_PUBLISHABLE_KEY: env.CLERK_PUBLISHABLE_KEY || "",
           }).generateMCPToken("oauth_client");
 
           return new Response(
@@ -437,8 +450,8 @@ export default {
 
           // Generate an access token (simplified - just use MCP token format)
           const token = await new ClerkHandler({
-            CLERK_SECRET_KEY: env.CLERK_SECRET_KEY,
-            CLERK_PUBLISHABLE_KEY: env.CLERK_PUBLISHABLE_KEY,
+            CLERK_SECRET_KEY: env.CLERK_SECRET_KEY || "",
+            CLERK_PUBLISHABLE_KEY: env.CLERK_PUBLISHABLE_KEY || "",
           }).generateMCPToken("oauth_client");
 
           return new Response(
@@ -536,10 +549,10 @@ export default {
       });
     }
 
-    // Initialize Clerk handler
+    // Initialize Clerk handler (provide empty strings if not configured)
     const clerkHandler = new ClerkHandler({
-      CLERK_SECRET_KEY: env.CLERK_SECRET_KEY,
-      CLERK_PUBLISHABLE_KEY: env.CLERK_PUBLISHABLE_KEY,
+      CLERK_SECRET_KEY: env.CLERK_SECRET_KEY || "",
+      CLERK_PUBLISHABLE_KEY: env.CLERK_PUBLISHABLE_KEY || "",
     });
 
     // Handle SSE endpoint for MCP
