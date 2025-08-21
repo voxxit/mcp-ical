@@ -43,7 +43,16 @@ jobs:
         run: npx eslint .
 
       - name: Run tests with coverage
-        run: npx vitest run --coverage
+        run: npx vitest run --coverage --reporter=default --reporter=junit --outputFile=test-results.junit.xml
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./test-results.junit.xml
+          flags: unittests
+          name: test-results-${{ matrix.node-version }}
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
