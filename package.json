@@ -47,16 +47,19 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@clerk/backend": "^1.22.0",
+    "@clerk/backend": "2.9.4",
     "@modelcontextprotocol/sdk": "^1.17.2",
     "agents": "^0.0.113",
     "axios": "^1.11.0",
-    "jose": "^6.0.12",
     "node-cache": "^5.1.2",
     "node-ical": "^0.20.1",
     "rrule": "^2.8.1",
     "temporal-polyfill": "^0.3.0",
-    "zod": "^3.25.76"
+    "zod": "4.0.17"
+  },
+  "_comments": {
+    "temporal-polyfill": "Required runtime polyfill for Temporal API in Node.js environments. Used in calendar-manager.ts and timezone-date-manager.ts for robust date/time operations.",
+    "security": "Clerk and Zod versions are pinned (no ^ prefix) for security compliance and predictable auth/validation behavior."
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250121.1",
