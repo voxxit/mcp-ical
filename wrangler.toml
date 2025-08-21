@@ -1,0 +1,45 @@
+name = "mcp-ical-server"
+main = "src/worker-auth.ts"
+compatibility_date = "2025-08-20"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = "npm run build:worker"
+
+# Environment variables can be set here or in the dashboard
+[vars]
+# Default timezone for date operations (users can override)
+TZ = "UTC"
+# Enable Clerk authentication
+ENABLE_AUTH = "true"
+# Clerk JWKS URL for JWT verification
+CLERK_JWKS_URL = "https://right-mullet-53.clerk.accounts.dev/.well-known/jwks.json"
+# Clerk Publishable Key (public, safe to commit)
+CLERK_PUBLISHABLE_KEY = "pk_test_cmlnaHQtbXVsbGV0LTUzLmNsZXJrLmFjY291bnRzLmRldiQ"
+# Clerk Redirect URLs
+CLERK_SIGN_IN_FALLBACK_REDIRECT_URL = "/dashboard"
+CLERK_SIGN_UP_FALLBACK_REDIRECT_URL = "/dashboard"
+CLERK_SIGN_IN_FORCE_REDIRECT_URL = "/dashboard"
+CLERK_SIGN_UP_FORCE_REDIRECT_URL = "/dashboard"
+
+# Secrets should be set via wrangler secret put
+# For Clerk authentication (optional):
+# CLERK_SECRET_KEY = "your-clerk-secret-key"
+# CLERK_PUBLISHABLE_KEY = "your-clerk-publishable-key"
+# CLERK_JWT_KEY = "your-clerk-jwt-key"
+
+[[kv_namespaces]]
+binding = "CALENDAR_CACHE"
+id = "ef7ee8d08989436fb3f092b8e1e43ab3"
+preview_id = "f749ff4c9bef473baddd68ddf53685da"
+
+[[durable_objects.bindings]]
+name = "ICAL_MCP"
+class_name = "ICalMCPSQLite"
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["ICalMCPSQLite"]
+
+[observability.logs]
+enabled = true

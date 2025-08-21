@@ -7,13 +7,19 @@
   },
   "scripts": {
     "build": "tsc && chmod +x dist/index.js",
+    "build:worker": "tsc --project tsconfig.worker.json",
     "start": "node dist/index.js",
     "dev": "tsc && node dist/index.js",
+    "dev:worker": "wrangler dev",
+    "deploy": "npm run types && npm run build:worker && wrangler deploy",
+    "deploy:preview": "npm run types && npm run build:worker && wrangler deploy --env preview",
     "setup": "node start.js",
+    "setup:kv": "wrangler kv:namespace create CALENDAR_CACHE && wrangler kv:namespace create CALENDAR_CACHE --preview",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:manual": "tsc && node dist/test.js",
+    "types": "wrangler types",
     "prepublishOnly": "npm run build && npm test",
     "prepare": "husky"
   },
@@ -40,14 +46,19 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@clerk/backend": "^1.22.0",
     "@modelcontextprotocol/sdk": "^1.17.2",
+    "agents": "^0.0.113",
     "axios": "^1.11.0",
+    "jose": "^6.0.12",
     "node-cache": "^5.1.2",
     "node-ical": "^0.20.1",
     "rrule": "^2.8.1",
-    "temporal-polyfill": "^0.3.0"
+    "temporal-polyfill": "^0.3.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250121.1",
     "@types/jest": "^30.0.0",
     "@types/nock": "^10.0.3",
     "@types/node": "^24.2.1",
@@ -63,6 +74,7 @@
     "nock": "^14.0.9",
     "prettier": "3.6.2",
     "ts-jest": "^29.4.1",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "wrangler": "^4.31.0"
   }
 }

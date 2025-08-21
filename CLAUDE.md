@@ -96,3 +96,5 @@ Tools are defined in `server-setup.ts` with:
 - Calendar subscriptions persist across server restarts
 - Cache TTL is per-calendar based on refresh interval
 - The server displays startup instructions and status in stderr
+
+- NEVER bypass pre-commit hooks
