@@ -33,7 +33,23 @@ id = "your-actual-kv-namespace-id"
 preview_id = "your-actual-preview-kv-namespace-id"
 ```
 
-### 3. Configure Environment Variables
+### 3. Configure Durable Object Bindings
+
+The Worker requires a Durable Object binding for state management. Add this to your `wrangler.toml`:
+
+```toml
+[[durable_objects.bindings]]
+name = "ICAL_MCP"
+class_name = "ICalMCPSQLite"
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["ICalMCPSQLite"]
+```
+
+This binding is required for the SSE endpoint to function properly, as it's referenced in the code via `ICalMCPSQLite.serveSSE("/sse", { binding: "ICAL_MCP" })`.
+
+### 4. Configure Environment Variables
 
 #### For Unauthenticated Mode
 
@@ -72,7 +88,7 @@ wrangler secret put CLERK_JWT_KEY  # Optional
 ENABLE_AUTH = "true"
 ```
 
-### 4. Deploy to Cloudflare
+### 5. Deploy to Cloudflare
 
 Deploy to production:
 
@@ -86,7 +102,7 @@ Deploy to preview environment:
 npm run deploy:preview
 ```
 
-### 5. Test Your Deployment
+### 6. Test Your Deployment
 
 Your MCP server will be available at:
 
