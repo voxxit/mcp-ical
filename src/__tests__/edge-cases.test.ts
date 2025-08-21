@@ -1,4 +1,4 @@
-import "temporal-polyfill/global";
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
 import { CalendarManager } from "../calendar-manager";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";

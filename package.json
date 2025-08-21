@@ -7,13 +7,20 @@
   },
   "scripts": {
     "build": "tsc && chmod +x dist/index.js",
+    "build:worker": "tsc --project tsconfig.worker.json",
     "start": "node dist/index.js",
     "dev": "tsc && node dist/index.js",
+    "dev:worker": "wrangler dev",
+    "deploy": "npm run types && npm run build:worker && wrangler deploy",
+    "deploy:preview": "npm run types && npm run build:worker && wrangler deploy --env preview",
     "setup": "node start.js",
-    "test": "jest --runInBand",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "setup:kv": "wrangler kv:namespace create CALENDAR_CACHE && wrangler kv:namespace create CALENDAR_CACHE --preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
     "test:manual": "tsc && node dist/test.js",
+    "types": "wrangler types",
     "prepublishOnly": "npm run build && npm test",
     "prepare": "husky"
   },
@@ -40,29 +47,39 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@clerk/backend": "2.9.4",
     "@modelcontextprotocol/sdk": "^1.17.2",
+    "agents": "^0.0.113",
     "axios": "^1.11.0",
     "node-cache": "^5.1.2",
     "node-ical": "^0.20.1",
     "rrule": "^2.8.1",
-    "temporal-polyfill": "^0.3.0"
+    "temporal-polyfill": "^0.3.0",
+    "zod": "4.0.17"
+  },
+  "_comments": {
+    "temporal-polyfill": "Required runtime polyfill for Temporal API in Node.js environments. Used in calendar-manager.ts and timezone-date-manager.ts for robust date/time operations.",
+    "security": "Clerk and Zod versions are pinned (no ^ prefix) for security compliance and predictable auth/validation behavior."
   },
   "devDependencies": {
-    "@types/jest": "^30.0.0",
+    "@cloudflare/workers-types": "^4.20250121.1",
     "@types/nock": "^10.0.3",
     "@types/node": "^24.2.1",
     "@typescript-eslint/eslint-plugin": "^8.39.1",
     "@typescript-eslint/parser": "^8.39.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
     "axios-mock-adapter": "^2.1.0",
     "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
+    "happy-dom": "^18.0.1",
     "husky": "^9.1.7",
-    "jest": "^30.0.5",
     "lint-staged": "^16.1.5",
     "nock": "^14.0.9",
     "prettier": "3.6.2",
-    "ts-jest": "^29.4.1",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.31.0"
   }
 }

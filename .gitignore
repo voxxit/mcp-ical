@@ -1,6 +1,9 @@
 ### Universal ###
 # Common files that should be ignored in all projects
 
+# macOS system files
+.DS_Store
+
 # Logs
 *.log
 # Temporary files
@@ -13,9 +16,14 @@
 .envrc
 *.env
 .env.*
+.dev.vars
 
 # Local configuration that shouldn't be shared
 *.local
+
+# Cloudflare
+.wrangler/
+dist-worker/
 
 ### Typescript ###
 # typescript specific files
@@ -25,3 +33,8 @@ node_modules/
 dist/
 
 coverage/
+
+# Test results
+test-results.junit.xml
+test-results/
+*.junit.xml

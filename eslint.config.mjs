@@ -99,6 +99,15 @@ export default [
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", "coverage/**"],
+    ignores: [
+      "dist/**", 
+      "node_modules/**", 
+      "coverage/**",
+      "src/worker-*.ts",
+      "src/clerk-auth.ts",
+      "worker-configuration.d.ts",
+      "wrangler.toml",
+      ".dev.vars*"
+    ],
   },
 ];

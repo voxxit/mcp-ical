@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CalendarManager } from "../calendar-manager";
 import { setupServer } from "../server-setup";

@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { CalendarManager } from "../calendar-manager";
 import MockAdapter from "axios-mock-adapter";
 import axios from "axios";

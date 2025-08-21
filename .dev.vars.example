@@ -1,0 +1,14 @@
+# Copy this file to .dev.vars for local development
+# These variables are used when running `npm run dev:worker`
+
+# Optional: Default calendar to subscribe to
+# CALENDAR_URL=https://example.com/calendar.ics
+
+# For Clerk authentication (optional)
+# Get these from your Clerk dashboard
+# CLERK_SECRET_KEY=sk_test_...
+# CLERK_PUBLISHABLE_KEY=pk_test_...
+# CLERK_JWT_KEY=...
+
+# Enable authentication (set to "true" to require Clerk auth)
+# ENABLE_AUTH=false
