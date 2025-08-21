@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // IMPORTANT: Adjust this import to the implementation file path. The script sets it to IMPORT_PATH placeholder.
-import { ClerkHandler, type ClerkEnv } from "src/clerk-auth";
+import { ClerkHandler, type ClerkEnv } from "../src/clerk-auth";
 
 // Mock @clerk/backend
 vi.mock("@clerk/backend", () => {
@@ -57,9 +57,7 @@ describe("ClerkHandler", () => {
     vi.clearAllMocks();
 
     // Polyfill btoa/atob for Node
-    // @ts-expect-error assign global
     globalThis.btoa = (s: string) => base64Encode(s);
-    // @ts-expect-error assign global
     globalThis.atob = (s: string) => base64Decode(s);
   });
 
@@ -101,7 +99,7 @@ describe("ClerkHandler", () => {
       expect(result.userId).toBe("user_123");
       expect(result.sessionId).toBe("sess_abc");
 
-      const clerkClient = (createClerkClient as vi.Mock).mock.results[0].value;
+      const clerkClient = (createClerkClient as any).mock.results[0].value;
       expect(clerkClient.users.getUser).toHaveBeenCalledWith("user_123");
       expect(result.email).toBe("user@example.com");
     });
@@ -146,9 +144,7 @@ describe("ClerkHandler", () => {
     });
 
     it("returns isValid=false if verifyToken throws", async () => {
-      (verifyToken as vi.Mock).mockRejectedValueOnce(
-        new Error("invalid token"),
-      );
+      (verifyToken as any).mockRejectedValueOnce(new Error("invalid token"));
       const handler = new ClerkHandler(env);
       const req = makeRequest({
         Authorization: "Bearer badToken",
@@ -159,7 +155,7 @@ describe("ClerkHandler", () => {
     });
 
     it("sets email to undefined if Clerk returns no email addresses", async () => {
-      (createClerkClient as vi.Mock).mockReturnValueOnce({
+      (createClerkClient as any).mockReturnValueOnce({
         users: {
           getUser: vi.fn(async () => ({ id: "user_123", emailAddresses: [] })),
         },
