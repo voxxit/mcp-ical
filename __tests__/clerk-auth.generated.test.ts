@@ -1,26 +1,26 @@
 /**
- * Test library and framework: Jest (describe/it/expect, jest.mock).
+ * Test library and framework: Jest (describe/it/expect, vi.mock).
  * These tests target the implementation in src/clerk-auth[.ts], specifically the diff contents provided.
  * External dependencies (@clerk/backend) are mocked. We also polyfill btoa/atob for Node.
  */
 
-import { describe, it, expect, jest, beforeEach, afterEach } from "@jest/globals";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // IMPORTANT: Adjust this import to the implementation file path. The script sets it to IMPORT_PATH placeholder.
 import { ClerkHandler, type ClerkEnv } from "src/clerk-auth";
 
 // Mock @clerk/backend
-jest.mock("@clerk/backend", () => {
+vi.mock("@clerk/backend", () => {
   return {
-    createClerkClient: jest.fn(() => ({
+    createClerkClient: vi.fn(() => ({
       users: {
-        getUser: jest.fn(async (userId: string) => ({
+        getUser: vi.fn(async (userId: string) => ({
           id: userId,
           emailAddresses: [{ emailAddress: "user@example.com" }],
         })),
       },
     })),
-    verifyToken: jest.fn(async (token: string, opts: any) => ({
+    verifyToken: vi.fn(async (_token: string, _opts: any) => ({
       sub: "user_123",
       sid: "sess_abc",
     })),
@@ -30,18 +30,20 @@ jest.mock("@clerk/backend", () => {
 const { createClerkClient, verifyToken } = require("@clerk/backend");
 
 // Minimal Request-like helper: the code only calls request.headers.get(name)
-const makeRequest = (headers: Record<string, string>): Request => {
+const makeRequest = (headers: Record<string, string>): any => {
   const h = new Map<string, string>(Object.entries(headers));
   const reqLike = {
     headers: {
       get: (name: string) => h.get(name) ?? null,
     },
-  } as unknown as Request;
+  };
   return reqLike;
 };
 
-const base64Encode = (str: string) => Buffer.from(str, "utf8").toString("base64");
-const base64Decode = (b64: string) => Buffer.from(b64, "base64").toString("utf8");
+const base64Encode = (str: string) =>
+  Buffer.from(str, "utf8").toString("base64");
+const base64Decode = (b64: string) =>
+  Buffer.from(b64, "base64").toString("utf8");
 
 describe("ClerkHandler", () => {
   const env: ClerkEnv = {
@@ -51,8 +53,8 @@ describe("ClerkHandler", () => {
   };
 
   beforeEach(() => {
-    jest.useFakeTimers().setSystemTime(new Date("2025-01-01T00:00:00Z"));
-    jest.clearAllMocks();
+    vi.useFakeTimers().setSystemTime(new Date("2025-01-01T00:00:00Z"));
+    vi.clearAllMocks();
 
     // Polyfill btoa/atob for Node
     // @ts-expect-error assign global
@@ -62,7 +64,7 @@ describe("ClerkHandler", () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe("verifyRequest", () => {
@@ -85,18 +87,21 @@ describe("ClerkHandler", () => {
       const result = await handler.verifyRequest(req);
 
       expect(verifyToken).toHaveBeenCalledTimes(1);
-      expect(verifyToken).toHaveBeenCalledWith("headerToken123", expect.objectContaining({
-        secretKey: env.CLERK_SECRET_KEY,
-        authorizedParties: [
-          "https://mcp-ical-server.kiwrlty0dq.workers.dev",
-          "http://localhost:8787",
-        ],
-      }));
+      expect(verifyToken).toHaveBeenCalledWith(
+        "headerToken123",
+        expect.objectContaining({
+          secretKey: env.CLERK_SECRET_KEY,
+          authorizedParties: [
+            "https://mcp-ical-server.kiwrlty0dq.workers.dev",
+            "http://localhost:8787",
+          ],
+        }),
+      );
       expect(result.isValid).toBe(true);
       expect(result.userId).toBe("user_123");
       expect(result.sessionId).toBe("sess_abc");
 
-      const clerkClient = (createClerkClient as jest.Mock).mock.results[0].value;
+      const clerkClient = (createClerkClient as vi.Mock).mock.results[0].value;
       expect(clerkClient.users.getUser).toHaveBeenCalledWith("user_123");
       expect(result.email).toBe("user@example.com");
     });
@@ -108,7 +113,10 @@ describe("ClerkHandler", () => {
       });
 
       await handler.verifyRequest(req);
-      expect(verifyToken).toHaveBeenCalledWith("cookieToken456", expect.any(Object));
+      expect(verifyToken).toHaveBeenCalledWith(
+        "cookieToken456",
+        expect.any(Object),
+      );
     });
 
     it("falls back to __session cookie when __clerk_db_jwt is missing", async () => {
@@ -118,7 +126,10 @@ describe("ClerkHandler", () => {
       });
 
       await handler.verifyRequest(req);
-      expect(verifyToken).toHaveBeenCalledWith("sessionToken789", expect.any(Object));
+      expect(verifyToken).toHaveBeenCalledWith(
+        "sessionToken789",
+        expect.any(Object),
+      );
     });
 
     it("falls back to __client cookie when __clerk_db_jwt and __session are missing", async () => {
@@ -128,11 +139,16 @@ describe("ClerkHandler", () => {
       });
 
       await handler.verifyRequest(req);
-      expect(verifyToken).toHaveBeenCalledWith("clientToken999", expect.any(Object));
+      expect(verifyToken).toHaveBeenCalledWith(
+        "clientToken999",
+        expect.any(Object),
+      );
     });
 
     it("returns isValid=false if verifyToken throws", async () => {
-      (verifyToken as jest.Mock).mockRejectedValueOnce(new Error("invalid token"));
+      (verifyToken as vi.Mock).mockRejectedValueOnce(
+        new Error("invalid token"),
+      );
       const handler = new ClerkHandler(env);
       const req = makeRequest({
         Authorization: "Bearer badToken",
@@ -143,9 +159,9 @@ describe("ClerkHandler", () => {
     });
 
     it("sets email to undefined if Clerk returns no email addresses", async () => {
-      (createClerkClient as jest.Mock).mockReturnValueOnce({
+      (createClerkClient as vi.Mock).mockReturnValueOnce({
         users: {
-          getUser: jest.fn(async () => ({ id: "user_123", emailAddresses: [] })),
+          getUser: vi.fn(async () => ({ id: "user_123", emailAddresses: [] })),
         },
       });
 
@@ -162,13 +178,22 @@ describe("ClerkHandler", () => {
     it("builds sign-in URL with default redirect to origin/dashboard when returnUrl is not provided", () => {
       const handler = new ClerkHandler(env);
       const url = handler.getLoginUrl("https://app.example.com");
-      expect(url).toBe("https://exampleDomain.accounts.dev/sign-in?redirect_url=" + encodeURIComponent("https://app.example.com/dashboard"));
+      expect(url).toBe(
+        "https://exampleDomain.accounts.dev/sign-in?redirect_url=" +
+          encodeURIComponent("https://app.example.com/dashboard"),
+      );
     });
 
     it("builds sign-in URL with provided returnUrl", () => {
       const handler = new ClerkHandler(env);
-      const url = handler.getLoginUrl("https://app.example.com", "https://app.example.com/custom");
-      expect(url).toBe("https://exampleDomain.accounts.dev/sign-in?redirect_url=" + encodeURIComponent("https://app.example.com/custom"));
+      const url = handler.getLoginUrl(
+        "https://app.example.com",
+        "https://app.example.com/custom",
+      );
+      expect(url).toBe(
+        "https://exampleDomain.accounts.dev/sign-in?redirect_url=" +
+          encodeURIComponent("https://app.example.com/custom"),
+      );
     });
   });
 
@@ -176,13 +201,22 @@ describe("ClerkHandler", () => {
     it("builds sign-up URL with default redirect to origin/dashboard when returnUrl is not provided", () => {
       const handler = new ClerkHandler(env);
       const url = handler.getSignupUrl("https://app.example.com");
-      expect(url).toBe("https://exampleDomain.accounts.dev/sign-up?redirect_url=" + encodeURIComponent("https://app.example.com/dashboard"));
+      expect(url).toBe(
+        "https://exampleDomain.accounts.dev/sign-up?redirect_url=" +
+          encodeURIComponent("https://app.example.com/dashboard"),
+      );
     });
 
     it("builds sign-up URL with provided returnUrl", () => {
       const handler = new ClerkHandler(env);
-      const url = handler.getSignupUrl("https://app.example.com", "https://app.example.com/after");
-      expect(url).toBe("https://exampleDomain.accounts.dev/sign-up?redirect_url=" + encodeURIComponent("https://app.example.com/after"));
+      const url = handler.getSignupUrl(
+        "https://app.example.com",
+        "https://app.example.com/after",
+      );
+      expect(url).toBe(
+        "https://exampleDomain.accounts.dev/sign-up?redirect_url=" +
+          encodeURIComponent("https://app.example.com/after"),
+      );
     });
   });
 
@@ -206,7 +240,10 @@ describe("ClerkHandler", () => {
         iss: "ical-mcp-server",
         type: "mcp-api-token",
       };
-      const token = base64Encode(JSON.stringify(expiredPayload)) + "." + base64Encode("sig");
+      const token =
+        base64Encode(JSON.stringify(expiredPayload)) +
+        "." +
+        base64Encode("sig");
       const result = await handler.verifyMCPToken(token);
       expect(result).toEqual({ isValid: false });
     });
@@ -221,20 +258,33 @@ describe("ClerkHandler", () => {
         iss: "not-ical",
         type: "mcp-api-token",
       };
-      const token1 = base64Encode(JSON.stringify(badIssuer)) + "." + base64Encode("sig");
-      await expect(handler.verifyMCPToken(token1)).resolves.toEqual({ isValid: false });
+      const token1 =
+        base64Encode(JSON.stringify(badIssuer)) + "." + base64Encode("sig");
+      await expect(handler.verifyMCPToken(token1)).resolves.toEqual({
+        isValid: false,
+      });
 
       const badType = { ...badIssuer, iss: "ical-mcp-server", type: "wrong" };
-      const token2 = base64Encode(JSON.stringify(badType)) + "." + base64Encode("sig");
-      await expect(handler.verifyMCPToken(token2)).resolves.toEqual({ isValid: false });
+      const token2 =
+        base64Encode(JSON.stringify(badType)) + "." + base64Encode("sig");
+      await expect(handler.verifyMCPToken(token2)).resolves.toEqual({
+        isValid: false,
+      });
     });
 
     it("verifyMCPToken handles malformed tokens gracefully", async () => {
       const handler = new ClerkHandler(env);
-      await expect(handler.verifyMCPToken("not-base64")).resolves.toEqual({ isValid: false });
-      await expect(handler.verifyMCPToken("abc.def.ghi")).resolves.toEqual({ isValid: false });
-      const badJson = Buffer.from("{bad json", "utf8").toString("base64") + ".sig";
-      await expect(handler.verifyMCPToken(badJson)).resolves.toEqual({ isValid: false });
+      await expect(handler.verifyMCPToken("not-base64")).resolves.toEqual({
+        isValid: false,
+      });
+      await expect(handler.verifyMCPToken("abc.def.ghi")).resolves.toEqual({
+        isValid: false,
+      });
+      const badJson =
+        Buffer.from("{bad json", "utf8").toString("base64") + ".sig";
+      await expect(handler.verifyMCPToken(badJson)).resolves.toEqual({
+        isValid: false,
+      });
     });
   });
 });

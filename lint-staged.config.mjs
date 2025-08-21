@@ -4,6 +4,6 @@
  */
 export default {
   "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"],
-  "src/**/*.{ts,tsx}": () => "npm test",
+  "src/**/*.{ts,tsx}": () => "npx vitest run src/__tests__",
   "*.{json,md,yml,yaml}": ["prettier --write"],
 };

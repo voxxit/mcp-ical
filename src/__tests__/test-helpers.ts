@@ -41,20 +41,8 @@ export async function cleanupTestConfig(calendarManager?: CalendarManager) {
     }
   }
 
-  // Also clean up any leftover test config files
-  try {
-    const files = await fs.readdir(process.cwd());
-    const testFiles = files.filter((file) =>
-      file.startsWith(".test-ical-config-"),
-    );
-    await Promise.all(
-      testFiles.map((file) =>
-        fs.unlink(path.join(process.cwd(), file)).catch(() => {}),
-      ),
-    );
-  } catch (_error) {
-    // Directory read failed, ignore
-  }
+  // REMOVED: The global cleanup of all test config files that was causing race conditions
+  // This was deleting config files from other running tests
 }
 
 /**
@@ -101,4 +89,25 @@ export async function cleanupIsolatedTestEnvironment(
 ) {
   await cleanupTestConfig(calendarManager);
   resetSingletonState();
+}
+
+/**
+ * Clean up any truly orphaned test config files.
+ * This should only be called when no tests are running to avoid race conditions.
+ * Meant for final cleanup after all tests complete.
+ */
+export async function cleanupOrphanedTestFiles() {
+  try {
+    const files = await fs.readdir(process.cwd());
+    const testFiles = files.filter((file) =>
+      file.startsWith(".test-ical-config-"),
+    );
+    await Promise.all(
+      testFiles.map((file) =>
+        fs.unlink(path.join(process.cwd(), file)).catch(() => {}),
+      ),
+    );
+  } catch (_error) {
+    // Directory read failed, ignore
+  }
 }

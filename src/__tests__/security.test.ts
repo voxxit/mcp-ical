@@ -1,3 +1,4 @@
+import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { CalendarManager } from "../calendar-manager";
 import { SecurityConfigManager } from "../security-config";
 import { TimezoneManager } from "../timezone-manager";
