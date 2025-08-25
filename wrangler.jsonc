@@ -1,0 +1,48 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "mcp-ical",
+    "main": "src/worker.ts",
+    "compatibility_date": "2025-08-16",
+    "compatibility_flags": [
+        "nodejs_compat"
+    ],
+    "migrations": [
+        {
+            "new_sqlite_classes": [
+                "MCP"
+            ],
+            "tag": "v1"
+        }
+    ],
+    "durable_objects": {
+        "bindings": [
+            {
+                "class_name": "MCP",
+                "name": "MCP_OBJECT"
+            }
+        ]
+    },
+    "kv_namespaces": [
+        {
+            "binding": "AUTH_STORE",
+            "id": "2ec9d217762a4e8a89b0a03db2d2f027"
+        }
+    ],
+    "vars": {
+        "STYTCH_PROJECT_ENV": "test",
+        "MCP_SERVER_NAME": "iCal MCP Server",
+        "MCP_SERVER_VERSION": "1.0.0",
+        "FRONTEND_URL": "http://localhost:8787"
+    },
+    "env": {
+        "production": {
+            "vars": {
+                "STYTCH_PROJECT_ENV": "live"
+            }
+        }
+    },
+    "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1
+    }
+}

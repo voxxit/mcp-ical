@@ -5,7 +5,7 @@ const { spawn } = require("child_process");
 const path = require("path");
 
 if (require.main === module) {
-  console.log(`
+	console.log(`
 ╔════════════════════════════════════════════════════════════════════╗
 ║                        iCal MCP Server Setup                       ║
 ╠════════════════════════════════════════════════════════════════════╣
@@ -43,15 +43,15 @@ if (require.main === module) {
 Current installation path: ${__dirname}
 `);
 
-  // If they really want to run it directly for testing
-  if (process.argv.includes("--test")) {
-    const child = spawn("node", [path.join(__dirname, "dist/index.js")], {
-      stdio: "inherit",
-      env: { ...process.env },
-    });
+	// If they really want to run it directly for testing
+	if (process.argv.includes("--test")) {
+		const child = spawn("node", [path.join(__dirname, "dist/index.js")], {
+			stdio: "inherit",
+			env: { ...process.env },
+		});
 
-    child.on("exit", (code) => {
-      process.exit(code);
-    });
-  }
+		child.on("exit", (code) => {
+			process.exit(code);
+		});
+	}
 }

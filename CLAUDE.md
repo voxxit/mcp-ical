@@ -39,6 +39,24 @@ These hooks are already configured and will run automatically on `git commit`.
 - `npm run setup:kv` - Create KV namespaces for Worker
 - `npm run types` - Generate Worker types from wrangler.toml
 
+#### Stytch Authentication Setup
+
+Before deploying the Worker, you must configure Stytch secrets:
+
+```bash
+# Set your Stytch project credentials as Cloudflare secrets
+wrangler secret put STYTCH_PROJECT_ID
+
+wrangler secret put STYTCH_SECRET_KEY
+# Enter your Stytch secret key from the dashboard
+
+# For production, also set these for the production environment
+wrangler secret put STYTCH_PROJECT_ID --env production
+wrangler secret put STYTCH_SECRET_KEY --env production
+```
+
+**Important**: Never commit actual keys to the repository. Always use `wrangler secret put` to securely store credentials.
+
 ### Testing
 
 - `npm test` - Run all tests with Vitest

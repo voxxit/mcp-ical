@@ -1,14 +1,14 @@
 {
-  "mcpServers": {
-    "mcp-ical": {
-      "command": "node",
-      "args": ["./dist/index.js"],
-      "env": {
-        "CALENDAR_URL": "",
-        "CALENDAR_NAME": "Default Calendar",
-        "CALENDAR_REFRESH_INTERVAL": "60",
-        "TZ": ""
-      }
-    }
-  }
+	"mcpServers": {
+		"mcp-ical": {
+			"command": "node",
+			"args": ["./dist/index.js"],
+			"env": {
+				"CALENDAR_URL": "",
+				"CALENDAR_NAME": "Default Calendar",
+				"CALENDAR_REFRESH_INTERVAL": "60",
+				"TZ": ""
+			}
+		}
+	}
 }
