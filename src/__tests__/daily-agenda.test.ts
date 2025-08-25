@@ -3,17 +3,17 @@ import MockAdapter from "axios-mock-adapter";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setupServer } from "../server-setup";
 import {
-	cleanupIsolatedTestEnvironment,
-	createIsolatedTestEnvironment,
+  cleanupIsolatedTestEnvironment,
+  createIsolatedTestEnvironment,
 } from "./test-helpers";
 
 describe("Daily Agenda Tool Tests", () => {
-	let server: any;
-	let axiosMock: MockAdapter;
-	let calendarManager: any;
+  let server: any;
+  let axiosMock: MockAdapter;
+  let calendarManager: any;
 
-	// Create test calendar with events throughout the day
-	const workdayCalendar = `BEGIN:VCALENDAR
+  // Create test calendar with events throughout the day
+  const workdayCalendar = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Test//Workday Test//EN
 CALSCALE:GREGORIAN
@@ -90,251 +90,251 @@ LOCATION:Boardroom
 END:VEVENT
 END:VCALENDAR`;
 
-	beforeEach(() => {
-		const testEnv = createIsolatedTestEnvironment();
-		calendarManager = testEnv.calendarManager;
-		axiosMock = new MockAdapter(axios);
-		server = setupServer(calendarManager);
-	});
+  beforeEach(() => {
+    const testEnv = createIsolatedTestEnvironment();
+    calendarManager = testEnv.calendarManager;
+    axiosMock = new MockAdapter(axios);
+    server = setupServer(calendarManager);
+  });
 
-	afterEach(async () => {
-		axiosMock.restore();
-		await cleanupIsolatedTestEnvironment(calendarManager);
-	});
+  afterEach(async () => {
+    axiosMock.restore();
+    await cleanupIsolatedTestEnvironment(calendarManager);
+  });
 
-	describe("get_daily_agenda", () => {
-		beforeEach(async () => {
-			const mockUrl = "https://example.com/calendar.ics";
-			axiosMock.onGet(mockUrl).reply(200, workdayCalendar);
+  describe("get_daily_agenda", () => {
+    beforeEach(async () => {
+      const mockUrl = "https://example.com/calendar.ics";
+      axiosMock.onGet(mockUrl).reply(200, workdayCalendar);
 
-			const handler = server.getRequestHandlers().get("tools/call");
-			await handler({
-				method: "tools/call",
-				params: {
-					name: "subscribe_calendar",
-					arguments: { url: mockUrl, name: "Work Calendar" },
-				},
-			});
-		});
+      const handler = server.getRequestHandlers().get("tools/call");
+      await handler({
+        method: "tools/call",
+        params: {
+          name: "subscribe_calendar",
+          arguments: { url: mockUrl, name: "Work Calendar" },
+        },
+      });
+    });
 
-		it("should return agenda for default working hours (9-5)", async () => {
-			const handler = server.getRequestHandlers().get("tools/call");
-			const response = await handler({
-				method: "tools/call",
-				params: {
-					name: "get_daily_agenda",
-					arguments: {
-						date: "2025-08-12",
-						calendarName: "Work Calendar",
-					},
-				},
-			});
+    it("should return agenda for default working hours (9-5)", async () => {
+      const handler = server.getRequestHandlers().get("tools/call");
+      const response = await handler({
+        method: "tools/call",
+        params: {
+          name: "get_daily_agenda",
+          arguments: {
+            date: "2025-08-12",
+            calendarName: "Work Calendar",
+          },
+        },
+      });
 
-			const agenda = JSON.parse(response.content[0].text);
+      const agenda = JSON.parse(response.content[0].text);
 
-			expect(agenda.timezone).toBeDefined();
-			expect(agenda.workingHours).toBe("9:00 - 17:00");
-			expect(agenda.totalEvents).toBeGreaterThan(0);
+      expect(agenda.timezone).toBeDefined();
+      expect(agenda.workingHours).toBe("9:00 - 17:00");
+      expect(agenda.totalEvents).toBeGreaterThan(0);
 
-			// Should include events during work hours
-			const summaries = agenda.events.map((e: any) => e.summary);
+      // Should include events during work hours
+      const summaries = agenda.events.map((e: any) => e.summary);
 
-			// These events should always be in working hours (9-5) regardless of timezone
-			expect(summaries).toContain("Morning Standup"); // 14:00Z = 9:00 AM EST, 6:00 AM PST
-			expect(summaries).toContain("Client Meeting"); // 15:00Z = 10:00 AM EST, 7:00 AM PST
-			expect(summaries).toContain("Lunch Meeting"); // 16:00Z = 11:00 AM EST, 8:00 AM PST
+      // These events should always be in working hours (9-5) regardless of timezone
+      expect(summaries).toContain("Morning Standup"); // 14:00Z = 9:00 AM EST, 6:00 AM PST
+      expect(summaries).toContain("Client Meeting"); // 15:00Z = 10:00 AM EST, 7:00 AM PST
+      expect(summaries).toContain("Lunch Meeting"); // 16:00Z = 11:00 AM EST, 8:00 AM PST
 
-			// These events depend on timezone - include if within working hours in local timezone
-			if (summaries.includes("Afternoon Workshop")) {
-				expect(summaries).toContain("Afternoon Workshop"); // 19:00Z = varies by timezone
-			}
-			if (summaries.includes("End of Day Review")) {
-				expect(summaries).toContain("End of Day Review"); // 21:30Z = varies by timezone
-			}
+      // These events depend on timezone - include if within working hours in local timezone
+      if (summaries.includes("Afternoon Workshop")) {
+        expect(summaries).toContain("Afternoon Workshop"); // 19:00Z = varies by timezone
+      }
+      if (summaries.includes("End of Day Review")) {
+        expect(summaries).toContain("End of Day Review"); // 21:30Z = varies by timezone
+      }
 
-			// Early Morning Gym (11:00Z) might be included depending on timezone
-			// Evening Social (23:00Z) should typically be excluded from 9-5 hours
-		});
+      // Early Morning Gym (11:00Z) might be included depending on timezone
+      // Evening Social (23:00Z) should typically be excluded from 9-5 hours
+    });
 
-		it("should include events that overlap with work hours", async () => {
-			const handler = server.getRequestHandlers().get("tools/call");
-			const response = await handler({
-				method: "tools/call",
-				params: {
-					name: "get_daily_agenda",
-					arguments: {
-						date: "2025-08-12",
-						calendarName: "Work Calendar",
-					},
-				},
-			});
+    it("should include events that overlap with work hours", async () => {
+      const handler = server.getRequestHandlers().get("tools/call");
+      const response = await handler({
+        method: "tools/call",
+        params: {
+          name: "get_daily_agenda",
+          arguments: {
+            date: "2025-08-12",
+            calendarName: "Work Calendar",
+          },
+        },
+      });
 
-			const agenda = JSON.parse(response.content[0].text);
-			const summaries = agenda.events.map((e: any) => e.summary);
+      const agenda = JSON.parse(response.content[0].text);
+      const summaries = agenda.events.map((e: any) => e.summary);
 
-			// Should include the meeting that starts at 8:30 and ends at 9:30
-			expect(summaries).toContain("Long Meeting");
-		});
+      // Should include the meeting that starts at 8:30 and ends at 9:30
+      expect(summaries).toContain("Long Meeting");
+    });
 
-		it("should respect custom working hours", async () => {
-			const handler = server.getRequestHandlers().get("tools/call");
-			const response = await handler({
-				method: "tools/call",
-				params: {
-					name: "get_daily_agenda",
-					arguments: {
-						date: "2025-08-12",
-						calendarName: "Work Calendar",
-						startHour: 6,
-						endHour: 14,
-					},
-				},
-			});
+    it("should respect custom working hours", async () => {
+      const handler = server.getRequestHandlers().get("tools/call");
+      const response = await handler({
+        method: "tools/call",
+        params: {
+          name: "get_daily_agenda",
+          arguments: {
+            date: "2025-08-12",
+            calendarName: "Work Calendar",
+            startHour: 6,
+            endHour: 14,
+          },
+        },
+      });
 
-			const agenda = JSON.parse(response.content[0].text);
+      const agenda = JSON.parse(response.content[0].text);
 
-			expect(agenda.workingHours).toBe("6:00 - 14:00");
+      expect(agenda.workingHours).toBe("6:00 - 14:00");
 
-			const summaries = agenda.events.map((e: any) => e.summary);
-			// Should now include early morning event
-			expect(summaries).toContain("Early Morning Gym");
-			// Should NOT include late afternoon events
-			expect(summaries).not.toContain("Afternoon Workshop");
-			expect(summaries).not.toContain("End of Day Review");
-		});
+      const summaries = agenda.events.map((e: any) => e.summary);
+      // Should now include early morning event
+      expect(summaries).toContain("Early Morning Gym");
+      // Should NOT include late afternoon events
+      expect(summaries).not.toContain("Afternoon Workshop");
+      expect(summaries).not.toContain("End of Day Review");
+    });
 
-		it("should default to today when no date specified", async () => {
-			const handler = server.getRequestHandlers().get("tools/call");
-			const response = await handler({
-				method: "tools/call",
-				params: {
-					name: "get_daily_agenda",
-					arguments: {
-						calendarName: "Work Calendar",
-					},
-				},
-			});
+    it("should default to today when no date specified", async () => {
+      const handler = server.getRequestHandlers().get("tools/call");
+      const response = await handler({
+        method: "tools/call",
+        params: {
+          name: "get_daily_agenda",
+          arguments: {
+            calendarName: "Work Calendar",
+          },
+        },
+      });
 
-			const agenda = JSON.parse(response.content[0].text);
+      const agenda = JSON.parse(response.content[0].text);
 
-			expect(agenda.date).toBeDefined();
-			expect(agenda.timezone).toBeDefined();
-			// Should use today's date
-			const today = new Date();
-			// Check that the date contains today's date info
-			expect(agenda.date).toContain(today.getDate().toString());
-		});
+      expect(agenda.date).toBeDefined();
+      expect(agenda.timezone).toBeDefined();
+      // Should use today's date
+      const today = new Date();
+      // Check that the date contains today's date info
+      expect(agenda.date).toContain(today.getDate().toString());
+    });
 
-		it("should detect and display the current timezone", async () => {
-			const handler = server.getRequestHandlers().get("tools/call");
-			const response = await handler({
-				method: "tools/call",
-				params: {
-					name: "get_daily_agenda",
-					arguments: {
-						date: "2025-08-12",
-					},
-				},
-			});
+    it("should detect and display the current timezone", async () => {
+      const handler = server.getRequestHandlers().get("tools/call");
+      const response = await handler({
+        method: "tools/call",
+        params: {
+          name: "get_daily_agenda",
+          arguments: {
+            date: "2025-08-12",
+          },
+        },
+      });
 
-			const agenda = JSON.parse(response.content[0].text);
+      const agenda = JSON.parse(response.content[0].text);
 
-			// Should have detected a timezone
-			expect(agenda.timezone).toBeDefined();
-			expect(typeof agenda.timezone).toBe("string");
-			expect(agenda.timezone.length).toBeGreaterThan(0);
+      // Should have detected a timezone
+      expect(agenda.timezone).toBeDefined();
+      expect(typeof agenda.timezone).toBe("string");
+      expect(agenda.timezone.length).toBeGreaterThan(0);
 
-			// Common timezone formats include "America/New_York", "Europe/London", or "UTC"
-			expect(agenda.timezone).toMatch(/^([A-Za-z]+\/[A-Za-z_]+|UTC)$/);
-		});
+      // Common timezone formats include "America/New_York", "Europe/London", or "UTC"
+      expect(agenda.timezone).toMatch(/^([A-Za-z]+\/[A-Za-z_]+|UTC)$/);
+    });
 
-		it("should return events sorted by start time", async () => {
-			const handler = server.getRequestHandlers().get("tools/call");
-			const response = await handler({
-				method: "tools/call",
-				params: {
-					name: "get_daily_agenda",
-					arguments: {
-						date: "2025-08-12",
-						calendarName: "Work Calendar",
-					},
-				},
-			});
+    it("should return events sorted by start time", async () => {
+      const handler = server.getRequestHandlers().get("tools/call");
+      const response = await handler({
+        method: "tools/call",
+        params: {
+          name: "get_daily_agenda",
+          arguments: {
+            date: "2025-08-12",
+            calendarName: "Work Calendar",
+          },
+        },
+      });
 
-			const agenda = JSON.parse(response.content[0].text);
+      const agenda = JSON.parse(response.content[0].text);
 
-			// Check that events are sorted chronologically
-			for (let i = 1; i < agenda.events.length; i++) {
-				const prevEvent = agenda.events[i - 1];
-				const currEvent = agenda.events[i];
+      // Check that events are sorted chronologically
+      for (let i = 1; i < agenda.events.length; i++) {
+        const prevEvent = agenda.events[i - 1];
+        const currEvent = agenda.events[i];
 
-				// Parse Temporal ISO strings to get timestamps for comparison
-				const prevStart = Temporal.ZonedDateTime.from(
-					prevEvent.start,
-				).epochMilliseconds;
-				const currStart = Temporal.ZonedDateTime.from(
-					currEvent.start,
-				).epochMilliseconds;
+        // Parse Temporal ISO strings to get timestamps for comparison
+        const prevStart = Temporal.ZonedDateTime.from(
+          prevEvent.start,
+        ).epochMilliseconds;
+        const currStart = Temporal.ZonedDateTime.from(
+          currEvent.start,
+        ).epochMilliseconds;
 
-				expect(currStart).toBeGreaterThanOrEqual(prevStart);
-			}
-		});
+        expect(currStart).toBeGreaterThanOrEqual(prevStart);
+      }
+    });
 
-		it("should handle all-day events appropriately", async () => {
-			const handler = server.getRequestHandlers().get("tools/call");
-			const response = await handler({
-				method: "tools/call",
-				params: {
-					name: "get_daily_agenda",
-					arguments: {
-						date: "2025-08-13", // Day with all-day event
-						calendarName: "Work Calendar",
-					},
-				},
-			});
+    it("should handle all-day events appropriately", async () => {
+      const handler = server.getRequestHandlers().get("tools/call");
+      const response = await handler({
+        method: "tools/call",
+        params: {
+          name: "get_daily_agenda",
+          arguments: {
+            date: "2025-08-13", // Day with all-day event
+            calendarName: "Work Calendar",
+          },
+        },
+      });
 
-			const agenda = JSON.parse(response.content[0].text);
+      const agenda = JSON.parse(response.content[0].text);
 
-			// All-day events might or might not be included depending on implementation
-			// but should not cause errors
-			expect(agenda).toBeDefined();
-			expect(agenda.events).toBeDefined();
-		});
+      // All-day events might or might not be included depending on implementation
+      // but should not cause errors
+      expect(agenda).toBeDefined();
+      expect(agenda.events).toBeDefined();
+    });
 
-		it("should handle empty calendars gracefully", async () => {
-			// Subscribe to a calendar with no events
-			const emptyCalendar = `BEGIN:VCALENDAR
+    it("should handle empty calendars gracefully", async () => {
+      // Subscribe to a calendar with no events
+      const emptyCalendar = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Test//Empty//EN
 END:VCALENDAR`;
 
-			const mockUrl2 = "https://example.com/empty.ics";
-			axiosMock.onGet(mockUrl2).reply(200, emptyCalendar);
+      const mockUrl2 = "https://example.com/empty.ics";
+      axiosMock.onGet(mockUrl2).reply(200, emptyCalendar);
 
-			const handler = server.getRequestHandlers().get("tools/call");
-			await handler({
-				method: "tools/call",
-				params: {
-					name: "subscribe_calendar",
-					arguments: { url: mockUrl2, name: "Empty Calendar" },
-				},
-			});
+      const handler = server.getRequestHandlers().get("tools/call");
+      await handler({
+        method: "tools/call",
+        params: {
+          name: "subscribe_calendar",
+          arguments: { url: mockUrl2, name: "Empty Calendar" },
+        },
+      });
 
-			const response = await handler({
-				method: "tools/call",
-				params: {
-					name: "get_daily_agenda",
-					arguments: {
-						date: "2025-08-12",
-						calendarName: "Empty Calendar",
-					},
-				},
-			});
+      const response = await handler({
+        method: "tools/call",
+        params: {
+          name: "get_daily_agenda",
+          arguments: {
+            date: "2025-08-12",
+            calendarName: "Empty Calendar",
+          },
+        },
+      });
 
-			const agenda = JSON.parse(response.content[0].text);
+      const agenda = JSON.parse(response.content[0].text);
 
-			expect(agenda.totalEvents).toBe(0);
-			expect(agenda.events).toEqual([]);
-		});
-	});
+      expect(agenda.totalEvents).toBe(0);
+      expect(agenda.events).toEqual([]);
+    });
+  });
 });
